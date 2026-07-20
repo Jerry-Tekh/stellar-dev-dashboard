@@ -98,18 +98,22 @@ export default function Transactions() {
     txNextCursor,
     txHasMore,
     txPagingLoading,
+    txScrollPosition,
     setTxNextCursor,
     setTxHasMore,
     setTxPagingLoading,
+    setTxScrollPosition,
     operations,
     opsLoading,
     appendOperations,
     opsNextCursor,
     opsHasMore,
     opsPagingLoading,
+    opsScrollPosition,
     setOpsNextCursor,
     setOpsHasMore,
     setOpsPagingLoading,
+    setOpsScrollPosition,
     network,
   } = useStore()
 
@@ -220,9 +224,6 @@ export default function Transactions() {
     }
   }, [connectedAddress, opsHasMore, opsNextCursor, opsPagingLoading, network, appendOperations, setOpsNextCursor, setOpsHasMore, setOpsPagingLoading])
 
-
-  const useVirtualTx = filteredTransactions.length >= VIRTUAL_SCROLL_THRESHOLD
-  const useVirtualOp = filteredOperations.length >= VIRTUAL_SCROLL_THRESHOLD
 
   function handleExportCsv() {
     if (view === 'transactions') {
@@ -400,110 +401,23 @@ export default function Transactions() {
             <span>Ops / Time</span>
           </div>
 
-          {/* Initial loading skeleton */}
           {txLoading ? (
             <LoadingRows count={8} height={TX_ROW_HEIGHT} />
           ) : filteredTransactions.length === 0 ? (
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
               {transactions.length === 0 ? 'No transactions found' : 'No transactions match your filters'}
             </div>
-          ) : useVirtualTx ? (
-            // Virtual scroll for large lists (≥200 items)
+          ) : (
             <VirtualTxList
               items={filteredTransactions}
               network={network}
               onLoadMore={handleLoadMoreTransactions}
               hasMore={txHasMore}
               loading={txPagingLoading}
+              initialScrollTop={txScrollPosition}
+              onScrollPositionChange={setTxScrollPosition}
+              addressLabels={addressLabels}
             />
-          ) : (
-            <>
-              {filteredTransactions.map((tx, index) => (
-                <div
-                  key={tx.id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto',
-                    gap: '12px',
-                    alignItems: 'center',
-                    padding: '12px 18px',
-                    borderBottom: index < filteredTransactions.length - 1 ? '1px solid var(--border)' : 'none',
-                    transition: 'var(--transition)',
-                  }}
-                  onMouseEnter={(event) => event.currentTarget.style.background = 'var(--bg-hover)'}
-                  onMouseLeave={(event) => event.currentTarget.style.background = 'transparent'}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                      <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: tx.successful ? 'var(--green)' : 'var(--red)', flexShrink: 0, display: 'inline-block' }} />
-                      <CopyableValue
-                        value={tx.hash}
-                        title="Copy transaction hash"
-                        containerStyle={{ fontSize: '12px', color: 'var(--cyan)', fontFamily: 'var(--font-mono)', minWidth: 0, flex: 1 }}
-                        textStyle={{ display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}
-                      >
-                        {tx.hash}
-                      </CopyableValue>
-                      <a
-                        href={`https://stellar.expert/explorer/${network}/tx/${tx.hash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: '11px', color: 'var(--cyan)', flexShrink: 0 }}
-                      >
-                        Open
-                      </a>
-                    </div>
-                    {tx.memo && (
-                      <div style={{ fontSize: '11px', color: 'var(--amber)', marginLeft: '15px' }}>
-                        memo: {tx.memo}
-                      </div>
-                    )}
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '15px' }}>
-                      fee: {tx.fee_charged} stroops
-                    </div>
-                    {tx.source_account && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '15px' }}>
-                        source: {addressLabels[tx.source_account] ? `${addressLabels[tx.source_account]} ` : ''}
-                        <CopyableValue value={tx.source_account} title="Copy source account" textStyle={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                          {shortAddress(tx.source_account)}
-                        </CopyableValue>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {tx.operation_count} op{tx.operation_count !== 1 ? 's' : ''}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {format(new Date(tx.created_at), 'MMM d, HH:mm')}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center' }}>
-                {txHasMore || txPagingLoading ? (
-                  <button
-                    onClick={handleLoadMoreTransactions}
-                    disabled={txPagingLoading}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-bright)',
-                      background: txPagingLoading ? 'var(--bg-elevated)' : 'transparent',
-                      color: 'var(--text-secondary)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '12px',
-                      cursor: txPagingLoading ? 'not-allowed' : 'pointer',
-                      opacity: txPagingLoading ? 0.8 : 1,
-                    }}
-                  >
-                    {txPagingLoading ? 'Loading...' : 'Load More'}
-                  </button>
-                ) : (
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No more transactions</span>
-                )}
-              </div>
-            </>
           )}
         </div>
       )}
@@ -522,107 +436,17 @@ export default function Transactions() {
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
               {operations.length === 0 ? 'No operations found' : 'No operations match your filters'}
             </div>
-          ) : useVirtualOp ? (
+          ) : (
             <VirtualOpList
               items={filteredOperations}
               network={network}
               onLoadMore={handleLoadMoreOperations}
               hasMore={opsHasMore}
               loading={opsPagingLoading}
+              initialScrollTop={opsScrollPosition}
+              onScrollPositionChange={setOpsScrollPosition}
+              addressLabels={addressLabels}
             />
-          ) : (
-            <>
-              {filteredOperations.map((op, index) => {
-                const extended = op as Horizon.ServerApi.OperationRecord & {
-                  from?: string
-                  to?: string
-                  amount?: string
-                  asset_code?: string
-                }
-                const amount = getOperationAmount(op)
-                const assetCode = getOperationAssetCode(op)
-
-                return (
-                <div
-                  key={String(op.id)}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto',
-                    gap: '12px',
-                    alignItems: 'center',
-                    padding: '12px 18px',
-                    borderBottom: index < filteredOperations.length - 1 ? '1px solid var(--border)' : 'none',
-                    transition: 'var(--transition)',
-                  }}
-                  onMouseEnter={(event) => event.currentTarget.style.background = 'var(--bg-hover)'}
-                  onMouseLeave={(event) => event.currentTarget.style.background = 'transparent'}
-                >
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '3px' }}>
-                      <span style={{
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-bright)',
-                        borderRadius: '3px',
-                        padding: '2px 6px',
-                        fontSize: '11px',
-                        color: 'var(--cyan)',
-                        marginRight: '8px',
-                        fontFamily: 'var(--font-mono)',
-                      }}>
-                        {getOperationLabel(op.type)}
-                      </span>
-                    </div>
-                    {extended.from && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        from: {addressLabels[extended.from] ? `${addressLabels[extended.from]} ` : ''}
-                        <CopyableValue value={extended.from} title="Copy source public key" textStyle={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                          {shortAddress(extended.from)}
-                        </CopyableValue>
-                      </div>
-                    )}
-                    {extended.to && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        to: {addressLabels[extended.to] ? `${addressLabels[extended.to]} ` : ''}
-                        <CopyableValue value={extended.to} title="Copy destination public key" textStyle={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                          {shortAddress(extended.to)}
-                        </CopyableValue>
-                      </div>
-                    )}
-                    {amount && (
-                      <div style={{ fontSize: '11px', color: 'var(--amber)' }}>
-                        {parseFloat(amount).toFixed(4)} {assetCode}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                    {format(new Date(op.created_at), 'MMM d, HH:mm')}
-                  </div>
-                </div>
-              )})}
-              <div style={{ padding: '14px 18px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center' }}>
-                {opsHasMore || opsPagingLoading ? (
-                  <button
-                    onClick={handleLoadMoreOperations}
-                    disabled={opsPagingLoading}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-bright)',
-                      background: opsPagingLoading ? 'var(--bg-elevated)' : 'transparent',
-                      color: 'var(--text-secondary)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '12px',
-                      cursor: opsPagingLoading ? 'not-allowed' : 'pointer',
-                      opacity: opsPagingLoading ? 0.8 : 1,
-                    }}
-                  >
-                    {opsPagingLoading ? 'Loading...' : 'Load More'}
-                  </button>
-                ) : (
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No more operations</span>
-                )}
-              </div>
-            </>
           )}
         </div>
       )}

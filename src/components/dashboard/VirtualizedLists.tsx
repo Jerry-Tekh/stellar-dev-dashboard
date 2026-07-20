@@ -9,22 +9,37 @@ export const TX_ROW_HEIGHT = 86;
 export const OP_ROW_HEIGHT = 74;
 
 interface VirtualTxListProps {
-  items: Horizon.ServerApi.TransactionRecord[]
-  network: string
-  onLoadMore?: () => void
-  hasMore?: boolean
-  loading?: boolean
+  items: Horizon.ServerApi.TransactionRecord[];
+  network: string;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loading?: boolean;
+  initialScrollTop?: number;
+  onScrollPositionChange?: (scrollTop: number) => void;
+  addressLabels?: Record<string, string>;
 }
 
 interface VirtualOpListProps {
-  items: Horizon.ServerApi.OperationRecord[]
-  network: string
-  onLoadMore?: () => void
-  hasMore?: boolean
-  loading?: boolean
+  items: Horizon.ServerApi.OperationRecord[];
+  network: string;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loading?: boolean;
+  initialScrollTop?: number;
+  onScrollPositionChange?: (scrollTop: number) => void;
+  addressLabels?: Record<string, string>;
 }
 
-export const VirtualTxList = ({ items, network, onLoadMore, hasMore, loading }: VirtualTxListProps) => {
+export const VirtualTxList = ({
+  items,
+  network,
+  onLoadMore,
+  hasMore,
+  loading,
+  initialScrollTop = 0,
+  onScrollPositionChange,
+  addressLabels = {},
+}: VirtualTxListProps) => {
   const rowHeight = (_index: number, item: Horizon.ServerApi.TransactionRecord) => {
     return item.memo ? TX_ROW_HEIGHT + 20 : TX_ROW_HEIGHT;
   };
@@ -35,9 +50,11 @@ export const VirtualTxList = ({ items, network, onLoadMore, hasMore, loading }: 
       rowHeight={rowHeight}
       onLoadMore={onLoadMore}
       loading={loading}
+      initialScrollTop={initialScrollTop}
+      onScrollPositionChange={onScrollPositionChange}
       containerStyle={{ height: '600px' }}
     >
-      {(tx: Horizon.ServerApi.TransactionRecord, _index: number) => (
+      {(tx: Horizon.ServerApi.TransactionRecord, _index: number, isFocused?: boolean) => (
         <div
           style={{
             display: 'grid',
@@ -48,9 +65,10 @@ export const VirtualTxList = ({ items, network, onLoadMore, hasMore, loading }: 
             borderBottom: '1px solid var(--border)',
             transition: 'var(--transition)',
             height: '100%',
+            background: isFocused ? 'var(--bg-hover)' : 'transparent',
           }}
           onMouseEnter={(event: React.MouseEvent<HTMLDivElement>) => (event.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={(event: React.MouseEvent<HTMLDivElement>) => (event.currentTarget.style.background = 'transparent')}
+          onMouseLeave={(event: React.MouseEvent<HTMLDivElement>) => (event.currentTarget.style.background = isFocused ? 'var(--bg-hover)' : 'transparent')}
         >
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
@@ -94,15 +112,16 @@ export const VirtualTxList = ({ items, network, onLoadMore, hasMore, loading }: 
               </a>
             </div>
             {tx.memo && (
-              <div style={{ fontSize: '11px', color: 'var(--amber)', marginLeft: '22px', marginBottom: '2px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--amber)', marginLeft: '15px', marginBottom: '2px' }}>
                 memo: {tx.memo as string}
               </div>
             )}
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '22px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '15px' }}>
               fee: {tx.fee_charged} stroops
             </div>
             {tx.source_account && (
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '22px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '15px' }}>
+                {addressLabels[tx.source_account] ? `${addressLabels[tx.source_account]} ` : ''}
                 <CopyableValue
                   value={tx.source_account}
                   title="Copy source account"
@@ -127,16 +146,27 @@ export const VirtualTxList = ({ items, network, onLoadMore, hasMore, loading }: 
   );
 };
 
-export const VirtualOpList = ({ items, network, onLoadMore, hasMore, loading }: VirtualOpListProps) => {
+export const VirtualOpList = ({
+  items,
+  network,
+  onLoadMore,
+  hasMore,
+  loading,
+  initialScrollTop = 0,
+  onScrollPositionChange,
+  addressLabels = {},
+}: VirtualOpListProps) => {
   return (
     <VirtualList
       items={items}
       rowHeight={OP_ROW_HEIGHT}
       onLoadMore={onLoadMore}
       loading={loading}
+      initialScrollTop={initialScrollTop}
+      onScrollPositionChange={onScrollPositionChange}
       containerStyle={{ height: '600px' }}
     >
-      {(op: Horizon.ServerApi.OperationRecord, _index: number) => (
+      {(op: Horizon.ServerApi.OperationRecord, _index: number, isFocused?: boolean) => (
         <div
           style={{
             display: 'grid',
@@ -147,9 +177,10 @@ export const VirtualOpList = ({ items, network, onLoadMore, hasMore, loading }: 
             borderBottom: '1px solid var(--border)',
             transition: 'var(--transition)',
             height: '100%',
+            background: isFocused ? 'var(--bg-hover)' : 'transparent',
           }}
           onMouseEnter={(event: React.MouseEvent<HTMLDivElement>) => (event.currentTarget.style.background = 'var(--bg-hover)')}
-          onMouseLeave={(event: React.MouseEvent<HTMLDivElement>) => (event.currentTarget.style.background = 'transparent')}
+          onMouseLeave={(event: React.MouseEvent<HTMLDivElement>) => (event.currentTarget.style.background = isFocused ? 'var(--bg-hover)' : 'transparent')}
         >
           <div>
             <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginBottom: '3px' }}>
@@ -170,6 +201,7 @@ export const VirtualOpList = ({ items, network, onLoadMore, hasMore, loading }: 
             </div>
             {'from' in op && op.from && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {addressLabels[(op as unknown as Record<string, string>).from] ? `${addressLabels[(op as unknown as Record<string, string>).from]} ` : ''}
                 <CopyableValue
                   value={(op as unknown as Record<string, string>).from}
                   title="Copy source public key"
@@ -181,6 +213,7 @@ export const VirtualOpList = ({ items, network, onLoadMore, hasMore, loading }: 
             )}
             {'to' in op && op.to && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {addressLabels[(op as unknown as Record<string, string>).to] ? `${addressLabels[(op as unknown as Record<string, string>).to]} ` : ''}
                 <CopyableValue
                   value={(op as unknown as Record<string, string>).to}
                   title="Copy destination public key"
