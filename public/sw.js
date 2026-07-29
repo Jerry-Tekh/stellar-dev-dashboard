@@ -5,6 +5,11 @@
  */
 
 const CACHE_NAME = 'stellar-shell-v1';
+const OUTBOX_DB_NAME = 'stellar-transaction-outbox';
+const OUTBOX_DB_VERSION = 1;
+const OUTBOX_STORE_NAME = 'transactions';
+const OUTBOX_SYNC_TAG = 'stellar-transaction-outbox';
+const OUTBOX_SUBMIT_LEASE_MS = 60_000;
 
 // Assets that form the offline-capable app shell
 const SHELL_ASSETS = [
@@ -110,7 +115,200 @@ self.addEventListener('sync', (event) => {
     // implement the flush logic here using IDB directly.
     event.waitUntil(Promise.resolve());
   }
+
+  if (event.tag === OUTBOX_SYNC_TAG) {
+    event.waitUntil(flushTransactionOutbox());
+  }
 });
+
+function openOutboxDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(OUTBOX_DB_NAME, OUTBOX_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(OUTBOX_STORE_NAME)) {
+        const store = db.createObjectStore(OUTBOX_STORE_NAME, { keyPath: 'id' });
+        store.createIndex('status', 'status', { unique: false });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function listOutboxItems() {
+  const db = await openOutboxDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(OUTBOX_STORE_NAME, 'readonly');
+    const request = transaction.objectStore(OUTBOX_STORE_NAME).getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function putOutboxItem(item) {
+  const db = await openOutboxDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(OUTBOX_STORE_NAME, 'readwrite');
+    transaction.objectStore(OUTBOX_STORE_NAME).put(item);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+async function claimOutboxItem(id) {
+  const db = await openOutboxDatabase();
+  const now = Date.now();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(OUTBOX_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(OUTBOX_STORE_NAME);
+    const request = store.get(id);
+    let claimed;
+
+    request.onsuccess = () => {
+      const item = request.result;
+      if (!item) return;
+
+      if (item.expiresAt !== null && item.expiresAt <= now) {
+        store.put({
+          ...item,
+          status: 'expired',
+          updatedAt: now,
+          submitLeaseUntil: undefined,
+          error: 'The transaction time bound has passed and it can no longer be submitted.',
+        });
+        return;
+      }
+
+      const stale =
+        item.status === 'submitting' && (item.submitLeaseUntil || 0) <= now;
+      if (item.status !== 'queued' && !stale) return;
+
+      claimed = {
+        ...item,
+        status: 'submitting',
+        attempts: item.attempts + 1,
+        updatedAt: now,
+        submitLeaseUntil: now + OUTBOX_SUBMIT_LEASE_MS,
+        error: undefined,
+      };
+      store.put(claimed);
+    };
+
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve(claimed);
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+async function notifyOutboxClients() {
+  const windowClients = await self.clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  });
+  windowClients.forEach((client) => {
+    client.postMessage({ type: 'TRANSACTION_OUTBOX_CHANGED' });
+  });
+}
+
+async function submitOutboxItem(id) {
+  const item = await claimOutboxItem(id);
+  if (!item) return;
+  await notifyOutboxClients();
+
+  try {
+    const isSoroban = item.submissionKind === 'soroban';
+    const endpoint = isSoroban
+      ? item.rpcUrl
+      : `${item.horizonUrl.replace(/\/$/, '')}/transactions`;
+    if (!endpoint) throw new Error('No submission endpoint is configured');
+
+    const response = await fetch(
+      endpoint,
+      isSoroban
+        ? {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: item.id,
+              method: 'sendTransaction',
+              params: { transaction: item.xdr },
+            }),
+          }
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ tx: item.xdr }).toString(),
+          },
+    );
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const error = new Error(
+        body?.extras?.result_codes?.transaction ||
+          body?.detail ||
+          `Horizon returned HTTP ${response.status}`,
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    if (body.error || body.result?.status === 'ERROR') {
+      const error = new Error(
+        body.error?.message ||
+          body.result?.errorResult ||
+          'Soroban RPC rejected the transaction',
+      );
+      error.status = 400;
+      throw error;
+    }
+
+    const result = isSoroban ? body.result || {} : body;
+    await putOutboxItem({
+      ...item,
+      status: 'confirmed',
+      updatedAt: Date.now(),
+      submitLeaseUntil: undefined,
+      hash: result.hash,
+      ledger: result.ledger ?? result.latestLedger,
+      successful: result.successful ?? true,
+      error: undefined,
+    });
+  } catch (error) {
+    const status = error?.status;
+    const retryable =
+      status === undefined || status === 408 || status === 429 || status >= 500;
+    await putOutboxItem({
+      ...item,
+      status: retryable ? 'queued' : 'failed',
+      updatedAt: Date.now(),
+      submitLeaseUntil: undefined,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (retryable) throw error;
+  } finally {
+    await notifyOutboxClients();
+  }
+}
+
+async function flushTransactionOutbox() {
+  const items = await listOutboxItems();
+  const eligible = items.filter(
+    (item) =>
+      item.status === 'queued' ||
+      (item.status === 'submitting' && (item.submitLeaseUntil || 0) <= Date.now()),
+  );
+  const results = await Promise.allSettled(
+    eligible.map((item) => submitOutboxItem(item.id)),
+  );
+  const rejected = results.find((result) => result.status === 'rejected');
+  if (rejected) {
+    throw rejected.reason;
+  }
+}
 
 // ─── Push Notifications ───────────────────────────────────────────────────────
 

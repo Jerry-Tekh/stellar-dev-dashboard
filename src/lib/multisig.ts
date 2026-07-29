@@ -4,9 +4,10 @@
  */
 
 import * as StellarSdk from "@stellar/stellar-sdk";
-import { getServer, NETWORKS, type NetworkName } from './stellar';
+import { NETWORKS, type NetworkName } from './stellar';
 import { getStoredValue, setStoredValue } from './storage';
-import { measureAsync, recordCustomMetric } from './performanceMonitoring';
+import { recordCustomMetric } from './performanceMonitoring';
+import { transactionOutbox } from './transactionOutbox';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -241,18 +242,7 @@ export function getSignersFromXdr(txXdr, network = 'testnet') {
  * @returns {Promise<object>} Horizon submit result
  */
 export async function submitMultisigTransaction(txXdr: string, network: NetworkName = 'testnet') {
-  const networkPassphrase = NETWORKS[network].passphrase;
-  const server = getServer(network);
-  const tx = StellarSdk.TransactionBuilder.fromXDR(txXdr, networkPassphrase);
-  return measureAsync(
-    'TRANSACTION_SUBMIT_DURATION',
-    () => server.submitTransaction(tx),
-    {
-      network,
-      operationCount: tx.operations?.length || 0,
-      source: 'multisig',
-    },
-  );
+  return transactionOutbox.enqueueAndSubmit(txXdr, network);
 }
 
 // ─── Session Management (IndexedDB) ──────────────────────────────────────────

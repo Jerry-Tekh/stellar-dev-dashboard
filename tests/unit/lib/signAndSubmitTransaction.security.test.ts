@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import 'fake-indexeddb/auto';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { SecretKeyHandle } from '../../../src/lib/SecretKeyHandle';
 import { signAndSubmitTransaction } from '../../../src/lib/transactionBuilder';
