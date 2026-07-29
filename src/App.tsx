@@ -96,6 +96,7 @@ const TABS: Record<string, TabComponent> = {
   txBuilder: lazyTab(() => import('./components/dashboard/TransactionBuilder')),
   contractInteraction: lazyTab(() => import('./components/dashboard/ContractInteraction')),
   contractABI: lazyTab(() => import('./components/dashboard/ContractABI')),
+  governance: lazyTab(() => import('./components/dashboard/Governance')),
   dex: lazyTab(() => import('./components/dashboard/DEXExplorer')),
   pathExplorer: lazyTab(() => import('./components/dashboard/PathExplorer')),
   explorers: lazyTab(() => import('./components/dashboard/ExplorerEmbed')),

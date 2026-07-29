@@ -50,6 +50,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'signer', label: 'Signer', icon: '✎' },
   { id: 'outbox', label: 'Outbox', icon: '⇧' },
   { id: 'multisig', label: 'Multisig', icon: '⊕' },
+  { id: 'governance', label: 'Governance', icon: '🏛' },
   { id: 'alertRules', label: 'Alerts', icon: '🔔' },
   { id: 'portfolio', label: 'Portfolio', icon: '◐' },
   { id: 'charts', label: 'Charts', icon: '▤' },
