@@ -66,7 +66,7 @@ Node 18+. No environment variables needed for default networks.
 | **Network** | Live ledger stats, SSE streams, fee analytics |
 | **Build** | Transaction builder, simulator, Freighter/Ledger signing |
 | **Explore** | SDEX order books, path payments, external explorer links |
-| **Tools** | Multisig, alert rules, portfolio analytics, data export, audit log |
+| **Tools** | Multisig, alert rules, portfolio analytics, data export, audit log, cross-chain bridge monitor |
 
 Supports **Mainnet**, **Testnet**, **Futurenet**, **Local**, and **Custom** network profiles.
 

@@ -116,6 +116,7 @@ const TABS: Record<string, TabComponent> = {
   liveActivity: lazyTab(() => import('./components/dashboard/LiveActivityFeed')),
   claimableBalances: lazyTab(() => import('./components/dashboard/ClaimableBalances')),
   dataExport: lazyTab(() => import('./components/dashboard/DataExport')),
+  bridgeMonitor: lazyTab(() => import('./components/dashboard/BridgeMonitor')),
 }
 
 function TabLoadingFallback() {
