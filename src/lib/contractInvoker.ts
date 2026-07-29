@@ -7,6 +7,7 @@ import {
   isValidPublicKey,
   type NetworkName,
 } from "./stellar";
+import { transactionOutbox } from "./transactionOutbox";
 
 type JsonSchemaDefinition = {
   description?: string;
@@ -560,12 +561,16 @@ export async function invokeContractFunction({
   const keypair = StellarSdk.Keypair.fromSecret(secretKey);
   prepared.sign(keypair);
 
-  const response = await server.sendTransaction(prepared);
+  const response = await transactionOutbox.enqueueAndSubmit(
+    prepared.toXDR(),
+    network,
+    'soroban',
+  );
 
   return {
-    hash: response.hash,
-    status: response.status,
-    latestLedger: response.latestLedger,
+    hash: response.hash || prepared.hash().toString('hex'),
+    status: response.status === 'confirmed' ? 'PENDING' : response.status.toUpperCase(),
+    latestLedger: response.ledger,
   };
 }
 

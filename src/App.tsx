@@ -54,6 +54,10 @@ import ThemeToggle from './components/layout/ThemeToggle'
 import OfflineBanner from './components/layout/OfflineBanner'
 import PWAInstallBanner from './components/PWAInstallBanner'
 import { useSwipeGesture } from './hooks/useSwipeGesture'
+import TransactionOutbox, {
+  TransactionOutboxBadge,
+} from './components/dashboard/TransactionOutbox'
+import { initializeTransactionOutbox } from './lib/transactionOutbox'
 
 interface SearchResult {
   type?: string
@@ -87,6 +91,7 @@ const TABS: Record<string, TabComponent> = {
   compare: lazyTab(() => import('./components/dashboard/AccountComparison')),
   wallet: lazyTab(() => import('./components/dashboard/WalletConnect')),
   signer: lazyTab(() => import('./components/dashboard/TransactionSigner')),
+  outbox: TransactionOutbox,
   portfolio: lazyTab(() => import('./components/dashboard/PortfolioValue')),
   txBuilder: lazyTab(() => import('./components/dashboard/TransactionBuilder')),
   contractInteraction: lazyTab(() => import('./components/dashboard/ContractInteraction')),
@@ -204,6 +209,7 @@ function DashboardLayout() {
 
   useEffect(() => {
     pruneCaches().catch(() => {})
+    return initializeTransactionOutbox()
   }, [])
 
   useEffect(() => {
@@ -349,6 +355,7 @@ function DashboardLayout() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <NetworkIndicator />
             </div>
+            <TransactionOutboxBadge />
             <CopyLinkButton />
             <button
               onClick={() => setPreferencesOpen(true)}
@@ -376,7 +383,7 @@ function DashboardLayout() {
             <PriceTicker />
           </div>
           <ErrorBoundary onRetry={handleRetry} maxRetries={2}>
-            {!connectedAddress ? (
+            {!connectedAddress && activeTab !== 'outbox' ? (
               <ConnectPanel />
             ) : (
               <Suspense fallback={<TabLoadingFallback />}>

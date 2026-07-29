@@ -48,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { type: 'header', label: 'TOOLS' },
   { id: 'wallet', label: 'Wallet', icon: '⊡' },
   { id: 'signer', label: 'Signer', icon: '✎' },
+  { id: 'outbox', label: 'Outbox', icon: '⇧' },
   { id: 'multisig', label: 'Multisig', icon: '⊕' },
   { id: 'alertRules', label: 'Alerts', icon: '🔔' },
   { id: 'portfolio', label: 'Portfolio', icon: '◐' },

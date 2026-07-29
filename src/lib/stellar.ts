@@ -1205,13 +1205,20 @@ export async function invokeContract(params: InvokeContractParams): Promise<Cont
 
   prepared.sign(keypair);
 
-  const response = await server.sendTransaction(prepared);
+  const { transactionOutbox } = await import('./transactionOutbox');
+  const response = await transactionOutbox.enqueueAndSubmit(
+    prepared.toXDR(),
+    network,
+    'soroban',
+  );
 
   return {
-    hash: response.hash,
-    status: response.status,
-    errorResult: response.errorResult ? response.errorResult.toXDR('base64') : null,
-    diagnosticEvents: (response.diagnosticEvents || []).map((event) => event.toXDR('base64')),
+    hash: response.hash || prepared.hash().toString('hex'),
+    status: (
+      response.status === 'confirmed' ? 'PENDING' : response.status.toUpperCase()
+    ) as StellarSdk.SorobanRpc.Api.SendTransactionStatus,
+    errorResult: response.status === 'failed' ? response.error || null : null,
+    diagnosticEvents: [],
   };
 }
 
