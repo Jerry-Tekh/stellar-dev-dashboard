@@ -85,6 +85,7 @@ const TABS: Record<string, TabComponent> = {
   builder: lazyTab(() => import('./components/dashboard/Builder')),
   faucet: lazyTab(() => import('./components/dashboard/Faucet')),
   compare: lazyTab(() => import('./components/dashboard/AccountComparison')),
+  watchlist: lazyTab(() => import('./components/dashboard/Watchlist')),
   wallet: lazyTab(() => import('./components/dashboard/WalletConnect')),
   signer: lazyTab(() => import('./components/dashboard/TransactionSigner')),
   portfolio: lazyTab(() => import('./components/dashboard/PortfolioValue')),

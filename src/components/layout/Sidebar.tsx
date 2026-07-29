@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'account', label: 'Account', icon: '◉' },
   { id: 'claimableBalances', label: 'Claimable', icon: '⊛' },
   { id: 'compare', label: 'Compare', icon: '◫' },
+  { id: 'watchlist', label: 'Watchlist', icon: '★' },
   { id: 'transactions', label: 'Transactions', icon: '⇄' },
   { id: 'contracts', label: 'Contracts', icon: '◻' },
   { id: 'assets', label: 'Assets', icon: '💎' },
