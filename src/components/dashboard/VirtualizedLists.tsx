@@ -4,9 +4,17 @@ import type { Horizon } from '@stellar/stellar-sdk';
 import VirtualList from '../common/VirtualList';
 import CopyableValue from './CopyableValue';
 import { shortAddress, getOperationLabel } from '../../lib/stellar';
+import {
+  formatStorageTtl,
+  stringifyStorageValue,
+  type StorageDurability,
+  type StorageEntry,
+} from '../../lib/contractStorage';
 
 export const TX_ROW_HEIGHT = 86;
 export const OP_ROW_HEIGHT = 74;
+export const STORAGE_ROW_HEIGHT = 78;
+export const STORAGE_ROW_HEIGHT_EXPANDED = 260;
 
 interface VirtualTxListProps {
   items: Horizon.ServerApi.TransactionRecord[];
@@ -234,6 +242,212 @@ export const VirtualOpList = ({
           </div>
         </div>
       )}
+    </VirtualList>
+  );
+};
+
+function durabilityColor(durability: StorageDurability): string {
+  if (durability === 'instance') return 'var(--cyan)';
+  if (durability === 'persistent') return 'var(--green)';
+  return 'var(--amber)';
+}
+
+function DurabilityBadge({ durability }: { durability: StorageDurability }) {
+  return (
+    <span
+      style={{
+        padding: '2px 6px',
+        borderRadius: '4px',
+        background: 'var(--bg-base)',
+        color: durabilityColor(durability),
+        textTransform: 'uppercase',
+        fontSize: '10px',
+        letterSpacing: '0.4px',
+      }}
+    >
+      {durability}
+    </span>
+  );
+}
+
+function TtlBadge({ entry, latestLedger }: { entry: StorageEntry; latestLedger: number }) {
+  const ttl = formatStorageTtl(entry, latestLedger);
+  if (!ttl.hasTtl) {
+    return <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>No TTL</span>;
+  }
+  return (
+    <span style={{ fontSize: '10px', color: ttl.isExpired ? 'var(--red)' : 'var(--text-muted)' }}>
+      {ttl.label}
+    </span>
+  );
+}
+
+/** Type-aware, single-line preview of a decoded (or raw-XDR) storage value for the collapsed row. */
+function StorageValuePreview({ value, decoded }: { value: unknown; decoded: boolean }) {
+  if (!decoded) {
+    return <span style={{ color: 'var(--text-muted)' }}>raw xdr: {String(value).slice(0, 40)}…</span>;
+  }
+  if (typeof value === 'boolean') {
+    return <span style={{ color: value ? 'var(--green)' : 'var(--red)' }}>{String(value)}</span>;
+  }
+  if (typeof value === 'bigint' || typeof value === 'number') {
+    return <span style={{ color: 'var(--amber)' }}>{String(value)}</span>;
+  }
+  return <span>{stringifyStorageValue(value) || '—'}</span>;
+}
+
+/** Type-aware, fully expanded renderer for a decoded (or raw-XDR fallback) storage key/value. */
+export function StorageValueDetail({
+  label,
+  value,
+  decoded,
+  rawXdr,
+}: {
+  label: string;
+  value: unknown;
+  decoded: boolean;
+  rawXdr: string;
+}) {
+  return (
+    <div>
+      <strong style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>
+        {label}
+        {!decoded && (
+          <span style={{ marginLeft: '8px', color: 'var(--amber)', textTransform: 'none' }}>
+            (type unknown — showing raw XDR)
+          </span>
+        )}
+      </strong>
+      <pre
+        style={{
+          margin: '4px 0 0',
+          padding: '10px',
+          background: 'var(--bg-base)',
+          borderRadius: '4px',
+          overflowX: 'auto',
+          fontSize: '11px',
+          lineHeight: 1.6,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}
+      >
+        {decoded
+          ? JSON.stringify(value, (_k, v) => (typeof v === 'bigint' ? v.toString() : v), 2)
+          : rawXdr}
+      </pre>
+    </div>
+  );
+}
+
+interface VirtualStorageListProps {
+  items: StorageEntry[];
+  latestLedger: number;
+  expandedId: string | null;
+  onToggleExpand: (id: string) => void;
+  initialScrollTop?: number;
+  onScrollPositionChange?: (scrollTop: number) => void;
+}
+
+export const VirtualStorageList = ({
+  items,
+  latestLedger,
+  expandedId,
+  onToggleExpand,
+  initialScrollTop = 0,
+  onScrollPositionChange,
+}: VirtualStorageListProps) => {
+  const rowHeight = (_index: number, item: StorageEntry) =>
+    item.id === expandedId ? STORAGE_ROW_HEIGHT_EXPANDED : STORAGE_ROW_HEIGHT;
+
+  return (
+    <VirtualList
+      items={items}
+      rowHeight={rowHeight}
+      initialScrollTop={initialScrollTop}
+      onScrollPositionChange={onScrollPositionChange}
+      containerStyle={{ height: '600px' }}
+    >
+      {(entry: StorageEntry, _index: number, isFocused?: boolean) => {
+        const expanded = entry.id === expandedId;
+        return (
+          <div
+            style={{
+              padding: '12px 18px',
+              borderBottom: '1px solid var(--border)',
+              background: isFocused ? 'var(--bg-hover)' : 'transparent',
+              height: '100%',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'center' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <DurabilityBadge durability={entry.durability} />
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono)',
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={stringifyStorageValue(entry.key)}
+                  >
+                    {stringifyStorageValue(entry.key) || '(empty key)'}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-muted)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <StorageValuePreview value={entry.value} decoded={entry.valueDecoded} />
+                </div>
+                <div style={{ marginTop: '4px' }}>
+                  <TtlBadge entry={entry} latestLedger={latestLedger} />
+                </div>
+              </div>
+              <button
+                onClick={() => onToggleExpand(entry.id)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--cyan)',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  flexShrink: 0,
+                }}
+              >
+                {expanded ? 'Hide' : 'View'}
+              </button>
+            </div>
+
+            {expanded && (
+              <div style={{ marginTop: '10px', display: 'grid', gap: '10px' }}>
+                <StorageValueDetail
+                  label="Key"
+                  value={entry.key}
+                  decoded={entry.keyDecoded}
+                  rawXdr={entry.keyRawXdr}
+                />
+                <StorageValueDetail
+                  label="Value"
+                  value={entry.value}
+                  decoded={entry.valueDecoded}
+                  rawXdr={entry.valueRawXdr}
+                />
+              </div>
+            )}
+          </div>
+        );
+      }}
     </VirtualList>
   );
 };
