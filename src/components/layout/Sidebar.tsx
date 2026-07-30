@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'watchlist', label: 'Watchlist', icon: '★' },
   { id: 'transactions', label: 'Transactions', icon: '⇄' },
   { id: 'contracts', label: 'Contracts', icon: '◻' },
+  { id: 'contractStorage', label: 'Contract Storage', icon: '⛁' },
   { id: 'assets', label: 'Assets', icon: '💎' },
   { id: 'anchors', label: 'Anchors', icon: '⚓' },
   { id: 'search', label: 'Search', icon: '🔍' },

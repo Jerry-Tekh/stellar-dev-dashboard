@@ -85,6 +85,7 @@ const TABS: Record<string, TabComponent> = {
   account: lazyTab(() => import('./components/dashboard/Account')),
   transactions: lazyTab(() => import('./components/dashboard/Transactions')),
   contracts: lazyTab(() => import('./components/dashboard/Contracts')),
+  contractStorage: lazyTab(() => import('./components/dashboard/ContractStorage')),
   network: lazyTab(() => import('./components/dashboard/NetworkStats')),
   builder: lazyTab(() => import('./components/dashboard/Builder')),
   faucet: lazyTab(() => import('./components/dashboard/Faucet')),
