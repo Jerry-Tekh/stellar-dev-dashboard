@@ -54,6 +54,7 @@
         "cacheStats": "Cache Stats",
         "multisig": "Multisig",
         "analytics": "Analytics",
+        "bridgeMonitor": "Bridge Monitor",
         "systemHealth": "System Health",
         "audit": "Audit Log",
         "compare": "Compare"
