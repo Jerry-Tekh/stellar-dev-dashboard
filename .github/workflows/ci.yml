@@ -152,7 +152,11 @@ jobs:
           retention-days: 14
 
       - name: Save updated snapshots
-        if: success()
+        # Playwright writes a fresh baseline (and still reports the test as
+        # failed) whenever no snapshot exists yet, so gating this on success()
+        # meant a first run could never establish a baseline for later runs
+        # to compare against. Save whenever the job wasn't cancelled outright.
+        if: ${{ !cancelled() }}
         uses: actions/cache/save@v6
         with:
           path: tests/e2e/snapshots
