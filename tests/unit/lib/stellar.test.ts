@@ -2,25 +2,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as stellar from '../../../src/lib/stellar'
 import type { NetworkName } from '../../../src/lib/stellar'
+import * as StellarSdk from '@stellar/stellar-sdk'
 
 // Mock Stellar SDK classes
 vi.mock('@stellar/stellar-sdk', async () => {
   const actual = await vi.importActual('@stellar/stellar-sdk')
   class MockHorizonServer {
     constructor(public url: string, public options?: any) {}
-    loadAccount = vi.fn()
-    transactions = vi.fn(() => this)
-    operations = vi.fn(() => this)
-    ledgers = vi.fn(() => this)
-    feeStats = vi.fn()
-    // chainable methods
-    forAccount = vi.fn(() => this)
-    order = vi.fn(() => this)
-    limit = vi.fn(() => this)
-    cursor = vi.fn(() => this)
-    call = vi.fn()
-    stream = vi.fn()
   }
+  // Shared across instances (getServer() constructs a fresh instance per call),
+  // so tests can configure behavior via createMockServer() before invoking stellar.ts.
+  MockHorizonServer.prototype.loadAccount = vi.fn()
+  MockHorizonServer.prototype.transactions = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.operations = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.ledgers = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.feeStats = vi.fn()
+  // chainable methods
+  MockHorizonServer.prototype.forAccount = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.order = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.limit = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.cursor = vi.fn(function (this: any) { return this })
+  MockHorizonServer.prototype.call = vi.fn()
+  MockHorizonServer.prototype.stream = vi.fn()
   return {
     ...actual,
     Horizon: { Server: MockHorizonServer },
@@ -32,13 +35,14 @@ vi.mock('@stellar/stellar-sdk', async () => {
 
 // Helper mock server
 function createMockServer() {
-  const server: any = new (vi.mocked(require('@stellar/stellar-sdk')).Horizon.Server)('https://example.com')
+  const server: any = new (StellarSdk as any).Horizon.Server('https://example.com')
   return server
 }
 
 beforeEach(() => {
-  // Reset cache between tests
-  ;(stellar as any).stellarCache.clear?.()
+  // Reset cache and shared SDK mock call history between tests
+  stellar.clearCache()
+  vi.clearAllMocks()
 })
 
 afterEach(() => {
@@ -50,7 +54,6 @@ describe('fetchAccount', () => {
     const mockAccount = { account_id: 'GABC', balances: [] }
     const mockServer = createMockServer()
     mockServer.loadAccount.mockResolvedValueOnce(mockAccount)
-    ;(stellar as any).getServer = vi.fn(() => mockServer)
 
     const result = await stellar.fetchAccount('GABC', 'testnet')
     expect(result).toBe(mockAccount)
@@ -61,7 +64,6 @@ describe('fetchAccount', () => {
     const mockAccount = { account_id: 'GXYZ', balances: [] }
     const mockServer = createMockServer()
     mockServer.loadAccount.mockResolvedValueOnce(mockAccount)
-    ;(stellar as any).getServer = vi.fn(() => mockServer)
 
     const first = await stellar.fetchAccount('GXYZ')
     const second = await stellar.fetchAccount('GXYZ')
@@ -73,7 +75,6 @@ describe('fetchAccount', () => {
   it('should propagate errors from server', async () => {
     const mockServer = createMockServer()
     mockServer.loadAccount.mockRejectedValueOnce(new Error('network error'))
-    ;(stellar as any).getServer = vi.fn(() => mockServer)
 
     await expect(stellar.fetchAccount('GFAIL')).rejects.toThrow('network error')
   })
@@ -82,7 +83,7 @@ describe('fetchAccount', () => {
 describe('fetchXLMPrice', () => {
   const originalFetch = global.fetch
   beforeEach(() => {
-    ;(stellar as any).stellarCache.clear?.()
+    stellar.clearCache()
   })
   afterEach(() => {
     // @ts-ignore

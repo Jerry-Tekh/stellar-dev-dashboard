@@ -18,7 +18,6 @@ class MockResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any).ResizeObserver = MockResizeObserver;
 
 vi.mock('../../../lib/store', () => ({

@@ -1452,7 +1452,7 @@ export function isValidEd25519PublicKey(key: string): boolean {
 export function isValidMuxedAccount(key: string): boolean {
   if (!key || typeof key !== 'string') return false
   try {
-    return StellarSdk.StrKey.isValidEd25519PublicKey(key) || key.startsWith('M');
+    return StellarSdk.StrKey.isValidMed25519PublicKey(key);
   } catch {
     return false;
   }
@@ -1462,7 +1462,7 @@ export function isValidMuxedAccount(key: string): boolean {
  * Check if address is a federated address (name*domain or name@domain)
  */
 export function isFederatedAddress(input: string): boolean {
-  return typeof input === 'string' && /^[a-zA-Z0-9._-]+\*[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(input);
+  return typeof input === 'string' && /^[a-zA-Z0-9._-]+[*@][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(input);
 }
 
 /**

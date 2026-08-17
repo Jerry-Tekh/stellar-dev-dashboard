@@ -183,7 +183,6 @@ export function destroyCollaborationSocket() {
 export function useCollaborationSocket(url: string): CollaborationSocket | null {
   // Dynamic import of useEffect so this module stays importable outside React.
   // In practice all callers are components, so the import is always available.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useEffect } = require('react') as typeof import('react')
 
   useEffect(() => {

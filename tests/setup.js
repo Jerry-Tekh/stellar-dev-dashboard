@@ -20,6 +20,21 @@ global.localStorage = {
   clear: () => { Object.keys(localStorageStore).forEach((k) => delete localStorageStore[k]); },
 };
 
+// ─── window.matchMedia mock (jsdom doesn't implement it) ─────────────────────
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // ─── navigator.clipboard mock ─────────────────────────────────────────────────
 Object.assign(navigator, {
   clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },

@@ -725,7 +725,6 @@ export const exampleCommitteeGovernanceAdapter: GovernanceAdapter<CommitteePropo
   ],
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const GOVERNANCE_ADAPTERS: Record<string, GovernanceAdapter<any, any>> = {
   [simpleVotingAdapter.id]: simpleVotingAdapter,
   [exampleCommitteeGovernanceAdapter.id]: exampleCommitteeGovernanceAdapter,

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import * as StellarSdk from '@stellar/stellar-sdk'
 import {
   fetchXLMPrice,
   fetchAssetPrice,
@@ -35,7 +36,7 @@ describe('Stellar API integration (MSW)', () => {
   })
 
   it('fetchAccount loads account data', async () => {
-    const publicKey = 'GTESTACCOUNT'
+    const publicKey = StellarSdk.Keypair.random().publicKey()
     const account = await fetchAccount(publicKey)
     expect(account.account_id).toBe(publicKey)
     expect(account.balances?.length).toBeGreaterThan(0)

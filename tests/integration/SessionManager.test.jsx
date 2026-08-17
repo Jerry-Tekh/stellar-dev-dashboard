@@ -3,9 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { createSession, SESSION_STATUS } from '../../src/lib/multisig';
 
+const mockStorage = vi.hoisted(() => new Map());
 vi.mock('../../src/lib/storage', () => ({
-  getStoredValue: vi.fn().mockResolvedValue(null),
-  setStoredValue: vi.fn(),
+  getStoredValue: vi.fn((key) => Promise.resolve(mockStorage.has(key) ? mockStorage.get(key) : null)),
+  setStoredValue: vi.fn((key, value) => {
+    mockStorage.set(key, value);
+    return Promise.resolve();
+  }),
 }));
 vi.mock('../../src/utils/stateSync', () => ({
   broadcastStateChange: vi.fn(),
@@ -30,6 +34,7 @@ const KP_A = StellarSdk.Keypair.random();
 describe('SessionManager (integration)', () => {
   beforeEach(() => {
     localStorage.clear();
+    mockStorage.clear();
     mockSuccess.mockClear();
     mockError.mockClear();
     useStore.setState({ network: 'testnet' }, false);

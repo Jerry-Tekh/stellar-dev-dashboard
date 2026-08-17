@@ -336,8 +336,16 @@ export const useStore = create<StoreState>((set, get) => ({
   })),
 
   comparisonSlots: [],
-  addComparisonSlot: () => set((state) => ({ comparisonSlots: [...state.comparisonSlots, { key: '', data: null, loading: false, error: null }] })),
-  removeComparisonSlot: (index) => set((state) => ({ comparisonSlots: state.comparisonSlots.filter((_, i) => i !== index) })),
+  addComparisonSlot: () => set((state) => (
+    state.comparisonSlots.length >= 5
+      ? state
+      : { comparisonSlots: [...state.comparisonSlots, { key: '', data: null, loading: false, error: null }] }
+  )),
+  removeComparisonSlot: (index) => set((state) => (
+    state.comparisonSlots.length <= 2
+      ? state
+      : { comparisonSlots: state.comparisonSlots.filter((_, i) => i !== index) }
+  )),
   reorderComparisonSlots: (orderedSlots) => set({ comparisonSlots: orderedSlots }),
   setComparisonKey: (index, key) => set((state) => {
     const next = [...state.comparisonSlots]
@@ -356,7 +364,7 @@ export const useStore = create<StoreState>((set, get) => ({
   }),
   setComparisonError: (index, error) => set((state) => {
     const next = [...state.comparisonSlots]
-    if (next[index]) next[index].error = error
+    if (next[index]) { next[index].error = error; next[index].data = null; }
     return { comparisonSlots: next }
   }),
 
@@ -399,7 +407,11 @@ export const useStore = create<StoreState>((set, get) => ({
   streamLedgers: [],
   streamError: null,
   setStreamStatus: (status) => set({ streamStatus: status }),
-  addStreamLedger: (l) => set((state) => ({ streamLedgers: [l, ...state.streamLedgers].slice(0, 50) })),
+  addStreamLedger: (l) => set((state) => (
+    state.streamLedgers.some((existing) => existing.sequence === l.sequence)
+      ? state
+      : { streamLedgers: [l, ...state.streamLedgers].slice(0, 50) }
+  )),
   clearStreamLedgers: () => set({ streamLedgers: [] }),
   setStreamError: (e) => set({ streamError: e }),
 }))

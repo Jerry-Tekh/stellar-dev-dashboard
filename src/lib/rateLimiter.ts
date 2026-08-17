@@ -411,7 +411,7 @@ class RateLimiter {
         tokens: this.maxRequests - 1,
         lastRefill: now,
         windowStart: now,
-        endpointUsage: new Map()
+        endpointUsage: new Map([[endpoint, 1]])
       };
       this.buckets.set(identifier, bucket);
       return { allowed: true, remaining: bucket.tokens };
