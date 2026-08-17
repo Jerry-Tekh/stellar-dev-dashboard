@@ -52,7 +52,7 @@ npm run build     # production build → dist/
 npm run preview   # preview production build
 ```
 
-Node 18+. No environment variables needed for default networks.
+Node 20+ (jsdom 29's dependencies no longer support Node 18). No environment variables needed for default networks.
 
 ---
 

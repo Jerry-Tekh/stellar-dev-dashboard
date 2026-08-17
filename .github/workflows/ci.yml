@@ -56,7 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['18', '20']
+        # jsdom 29's html-encoding-sniffer requires Node ^20.19 || ^22.12 || >=24,
+        # so Node 18 can't run this suite regardless of app code — only test what
+        # the toolchain actually supports.
+        node-version: ['20']
     steps:
       - uses: actions/checkout@v7
 
