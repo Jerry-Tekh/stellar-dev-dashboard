@@ -46,13 +46,19 @@ export class WASMProcessor {
     ) as ArrayBuffer;
 
     if (typeof crypto !== 'undefined' && crypto?.subtle?.digest) {
-      const digest = await crypto.subtle.digest('SHA-256', buffer);
-      return Array.from(new Uint8Array(digest))
-        .map((byte) => byte.toString(16).padStart(2, '0'))
-        .join('');
+      try {
+        const digest = await crypto.subtle.digest('SHA-256', buffer);
+        return Array.from(new Uint8Array(digest))
+          .map((byte) => byte.toString(16).padStart(2, '0'))
+          .join('');
+      } catch {
+        // Some jsdom/Node combinations construct ArrayBuffer in a different
+        // realm than the one crypto.subtle's native instanceof check expects,
+        // rejecting an otherwise-valid buffer. Fall through to the manual hash.
+      }
     }
 
-    // Fallback for environments without Web Crypto. This keeps receipts stable in tests.
+    // Fallback for environments without (or with a broken) Web Crypto. This keeps receipts stable in tests.
     let hash = 0x811c9dc5;
     for (const byte of bytes) {
       hash ^= byte;
