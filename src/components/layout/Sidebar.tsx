@@ -58,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'charts', label: 'Charts', icon: '▤' },
   { id: 'analytics', label: 'Analytics', icon: '◍' },
   { id: 'bridgeMonitor', label: 'Bridge Monitor', icon: '⇄' },
+  { id: 'qaSystem', label: 'AI QA System', icon: '⚛' },
   { id: 'systemHealth', label: 'Health', icon: '⚕' },
   { id: 'dataExport', label: 'Export', icon: '⬇' },
   { id: 'settings', label: 'Settings', icon: '⚙' },

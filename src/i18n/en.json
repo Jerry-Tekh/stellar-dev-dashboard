@@ -55,6 +55,7 @@
         "multisig": "Multisig",
         "analytics": "Analytics",
         "bridgeMonitor": "Bridge Monitor",
+        "qaSystem": "AI QA System",
         "systemHealth": "System Health",
         "audit": "Audit Log",
         "compare": "Compare"
