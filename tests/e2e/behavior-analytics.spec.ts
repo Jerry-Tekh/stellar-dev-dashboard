@@ -2,7 +2,20 @@ import { expect, test } from '@playwright/test';
 
 test.describe('privacy-first behavior analytics', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.removeItem('stellar:behavior-analytics:v1'));
+    await page.addInitScript(() => {
+      localStorage.removeItem('stellar:behavior-analytics:v1');
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent =
+          '*, *::before, *::after { animation: none !important; transition: none !important; }';
+        document.head.appendChild(style);
+      });
+    });
+    await page.route(/^https?:\/\//, async (route) => {
+      const hostname = new URL(route.request().url()).hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') await route.continue();
+      else await route.abort('blockedbyclient');
+    });
     await page.goto('/connect', { waitUntil: 'domcontentloaded' });
   });
 
