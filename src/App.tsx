@@ -111,6 +111,7 @@ const TABS: Record<string, TabComponent> = {
   analytics: lazyTab(() => import('./components/dashboard/Analytics')),
   behaviorInsights: lazyTab(() => import('./components/analytics/BehaviorAnalyticsDashboard')),
   systemHealth: lazyTab(() => import('./components/dashboard/SystemHealth')),
+  networkIntelligence: lazyTab(() => import('./components/network-intelligence/NetworkIntelligenceDashboard')),
   performance: lazyTab(() => import('./components/dashboard/PerformanceMonitor')),
   settings: lazyTab(() => import('./components/dashboard/Settings')),
   audit: lazyTab(() => import('./components/dashboard/AuditLog')),

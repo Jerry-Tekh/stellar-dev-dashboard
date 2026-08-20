@@ -66,6 +66,7 @@ Node 20+ (jsdom 29's dependencies no longer support Node 18). No environment var
 | **History** | Paginated transactions and operations with search and filters |
 | **Soroban** | Contract inspect, simulate, invoke, ABI viewer |
 | **Network** | Live ledger stats, SSE streams, fee analytics |
+| **Network Intelligence** | Health scoring, anomaly detection, congestion forecasts, incidents, capacity planning |
 | **Build** | Transaction builder, simulator, Freighter/Ledger signing |
 | **Explore** | SDEX order books, path payments, external explorer links |
 | **Tools** | Multisig, alert rules, portfolio analytics, data export, audit log, cross-chain bridge monitor |
@@ -86,6 +87,10 @@ Supports **Mainnet**, **Testnet**, **Futurenet**, **Local**, and **Custom** netw
 | Vitest + Playwright | Unit, integration, and E2E tests |
 
 Core lib files (`stellar.ts`, `store.ts`) are TypeScript; components are a mix of `.jsx` and `.tsx` during migration.
+
+See [Network Intelligence architecture and operations](docs/network-intelligence.md)
+for monitoring methodology, REST API usage, deployment guidance, and model
+validation practices.
 
 ---
 
