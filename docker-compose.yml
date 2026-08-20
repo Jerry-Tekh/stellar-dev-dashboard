@@ -58,3 +58,15 @@ services:
     environment:
       - NODE_ENV=development
     profiles: [dev]
+
+  network-monitor:
+    build:
+      context: .
+      dockerfile: services/network-monitor/Dockerfile
+    ports:
+      - "8787:8787"
+    environment:
+      - MONITOR_ALLOWED_ORIGIN=http://localhost:5173
+      - MONITOR_API_KEY=${MONITOR_API_KEY:-}
+    restart: unless-stopped
+    profiles: [monitoring]

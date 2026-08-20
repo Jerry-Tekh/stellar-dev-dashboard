@@ -78,6 +78,9 @@ jobs:
           npm ci --prefix services/behavior-analytics
           npm run test:analytics-service
 
+      - name: Test network monitoring service
+        run: npm run test:network-monitor
+
       - name: Upload coverage report
         if: matrix.node-version == '20'
         uses: codecov/codecov-action@v7
@@ -106,7 +109,7 @@ jobs:
         run: npm run build
 
       - name: Run behavior analytics E2E tests
-        run: npm run test:e2e:analytics
+        run: npm run test:e2e:critical
 
       - uses: actions/upload-artifact@v7
         if: failure()

@@ -194,6 +194,46 @@ table {
   max-width: 100%;
 }
 
+.network-intelligence th,
+.network-intelligence td {
+  padding: 11px 9px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.network-intelligence {
+  /* Small operational annotations still meet WCAG AA in both themes. */
+  --text-muted: var(--text-secondary);
+}
+
+[data-theme='light'] .network-intelligence {
+  --cyan: #0369a1;
+  --green: #047857;
+  --amber: #92400e;
+  --red: #b91c1c;
+}
+
+.network-intelligence input[type='range'] {
+  width: 100%;
+  accent-color: var(--cyan);
+}
+
+@media (max-width: 880px) {
+  .network-intelligence-split {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .network-intelligence *,
+  .network-intelligence *::before,
+  .network-intelligence *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Responsive utilities */
 .mobile-only { display: none; }
 .desktop-only { display: block; }
