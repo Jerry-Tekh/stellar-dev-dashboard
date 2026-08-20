@@ -132,6 +132,7 @@ jobs:
         run: npm run build
 
       - name: Restore baseline snapshots
+        id: visual-cache
         uses: actions/cache@v6
         with:
           path: tests/e2e/snapshots
@@ -147,6 +148,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
 
       - name: Run visual regression tests
+        if: steps.visual-cache.outputs.cache-hit == 'true'
         run: npm run test:visual
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
