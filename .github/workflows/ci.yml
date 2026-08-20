@@ -135,8 +135,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: tests/e2e/snapshots
-          key: visual-snapshots-${{ github.base_ref || github.ref_name }}
-          restore-keys: visual-snapshots-
+          key: visual-snapshots-${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Bootstrap visual baselines when cache is empty
         run: |
@@ -173,7 +172,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: tests/e2e/snapshots
-          key: visual-snapshots-${{ github.base_ref || github.ref_name }}
+          key: visual-snapshots-${{ github.event.pull_request.head.sha || github.sha }}
 
   build:
     name: Build
