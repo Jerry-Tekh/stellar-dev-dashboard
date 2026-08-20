@@ -54,6 +54,8 @@ import ThemeToggle from './components/layout/ThemeToggle'
 import OfflineBanner from './components/layout/OfflineBanner'
 import PWAInstallBanner from './components/PWAInstallBanner'
 import { useSwipeGesture } from './hooks/useSwipeGesture'
+import { useBehaviorAnalytics } from './hooks/useBehaviorAnalytics'
+import AnalyticsConsentBanner from './components/analytics/AnalyticsConsentBanner'
 import TransactionOutbox, {
   TransactionOutboxBadge,
 } from './components/dashboard/TransactionOutbox'
@@ -107,6 +109,7 @@ const TABS: Record<string, TabComponent> = {
   assets: lazyNamedTab(() => import('./components/assets'), 'AssetDiscovery'),
   multisig: lazyNamedTab(() => import('./components/multisig'), 'MultisigManager'),
   analytics: lazyTab(() => import('./components/dashboard/Analytics')),
+  behaviorInsights: lazyTab(() => import('./components/analytics/BehaviorAnalyticsDashboard')),
   systemHealth: lazyTab(() => import('./components/dashboard/SystemHealth')),
   performance: lazyTab(() => import('./components/dashboard/PerformanceMonitor')),
   settings: lazyTab(() => import('./components/dashboard/Settings')),
@@ -211,6 +214,7 @@ function DashboardLayout() {
   } = useStore()
   const { isMobile, isTablet } = useResponsive()
   const [notificationsOpen, setNotificationsOpen] = useState<boolean>(false)
+  const { track: trackBehavior } = useBehaviorAnalytics()
 
   useEffect(() => {
     pruneCaches().catch(() => {})
@@ -269,7 +273,12 @@ function DashboardLayout() {
       target: 'activeTab',
       metadata: { activeTab },
     })
-  }, [activeTab])
+    trackBehavior({
+      type: 'navigation',
+      name: `view:${activeTab}`,
+      properties: { tab: activeTab, source: 'dashboard' },
+    })
+  }, [activeTab, trackBehavior])
 
   const ActiveComponent: TabComponent = TABS[activeTab] || Overview
 
@@ -407,6 +416,7 @@ function DashboardLayout() {
           onClose={() => setNotificationsOpen(false)}
         />
         {isMobile && <MobileNavigation />}
+        <AnalyticsConsentBanner />
         {preferencesOpen && (
           <div
             style={{

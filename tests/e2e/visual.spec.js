@@ -10,15 +10,54 @@ import { test, expect } from '@playwright/test';
 
 const TESTNET_KEY = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
 
+test.beforeEach(async ({ page }) => {
+  // Visual tests must not depend on live ledger/price responses or motion timing.
+  // Install the deterministic environment before any application script runs.
+  await page.addInitScript(() => {
+    Math.random = () => 0.5;
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = `
+        *, *::before, *::after {
+          animation: none !important;
+          caret-color: transparent !important;
+          transition: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+  });
+  await page.clock.setFixedTime(new Date('2026-01-01T00:00:00.000Z'));
+  await page.route(/^https?:\/\//, async (route) => {
+    const hostname = new URL(route.request().url()).hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') await route.continue();
+    else await route.abort('blockedbyclient');
+  });
+});
+
 /** Wait for the page to be visually stable (no pending network or animations). */
 async function waitForStable(page) {
-  // 'networkidle' never resolves on views with any ongoing background
-  // activity (live price/ledger refreshes), so bound the wait instead of
-  // letting it consume the whole test timeout — best-effort settle, not a
-  // hard requirement.
-  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
-  // Extra tick so CSS transitions triggered by load finish
-  await page.waitForTimeout(300);
+  // Live price and ledger views intentionally poll, so networkidle is unreachable.
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(500);
+}
+
+async function expectScreenshot(target, name, options = {}) {
+  // This suite is Chromium-only. Capture through CDP to avoid Playwright's
+  // animation/actionability pipeline, which deadlocks on the live ticker.
+  const isLocator = typeof target.page === 'function';
+  const page = isLocator ? target.page() : target;
+  const elementClip = isLocator ? await target.boundingBox() : null;
+  if (isLocator && !elementClip) throw new Error(`Cannot capture hidden snapshot target: ${name}`);
+  const clip = options.clip ?? elementClip;
+  const session = await page.context().newCDPSession(page);
+  const { data } = await session.send('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: false,
+    ...(clip ? { clip: { ...clip, scale: 1 } } : {}),
+  });
+  const image = Buffer.from(data, 'base64');
+  expect(image).toMatchSnapshot(name, { maxDiffPixelRatio: 0.002 });
 }
 
 // ---------------------------------------------------------------------------
@@ -27,17 +66,17 @@ async function waitForStable(page) {
 
 test.describe('Connect Panel', () => {
   test('default state', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('connect-panel.png');
+    await expectScreenshot(page, 'connect-panel.png');
   });
 
   test('invalid key error state', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await page.getByPlaceholder(/G\.\.\. public key/i).fill('BADKEY');
     await page.getByRole('button', { name: /connect/i }).click();
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('connect-panel-error.png');
+    await expectScreenshot(page, 'connect-panel-error.png');
   });
 });
 
@@ -47,21 +86,21 @@ test.describe('Connect Panel', () => {
 
 test.describe('Layout', () => {
   test('sidebar', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page.locator('aside')).toHaveScreenshot('sidebar.png');
+    await expectScreenshot(page.locator('aside'), 'sidebar.png');
   });
 
   test('price ticker bar', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
     // The price ticker is the first child of the main layout header area
     const ticker = page.locator('[data-testid="price-ticker"], .price-ticker').first();
     if (await ticker.count()) {
-      await expect(ticker).toHaveScreenshot('price-ticker.png');
+      await expectScreenshot(ticker, 'price-ticker.png');
     } else {
       // Fallback: top 80px strip of the viewport
-      await expect(page).toHaveScreenshot('price-ticker-fallback.png', {
+      await expectScreenshot(page, 'price-ticker-fallback.png', {
         clip: { x: 0, y: 0, width: 1280, height: 80 },
       });
     }
@@ -82,14 +121,14 @@ test.describe('Dashboard tabs', () => {
 
   for (const { label, snapshot } of tabs) {
     test(`${snapshot}`, async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/connect', { waitUntil: 'domcontentloaded' });
       await waitForStable(page);
       const btn = page.getByRole('button', { name: label }).or(page.getByRole('link', { name: label })).first();
       if (await btn.count()) {
         await btn.click();
         await waitForStable(page);
       }
-      await expect(page).toHaveScreenshot(snapshot);
+      await expectScreenshot(page, snapshot);
     });
   }
 });
@@ -100,14 +139,14 @@ test.describe('Dashboard tabs', () => {
 
 test.describe('Connected account views', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await page.getByPlaceholder(/G\.\.\. public key/i).fill(TESTNET_KEY);
     await page.getByRole('button', { name: /connect/i }).click();
     await waitForStable(page);
   });
 
   test('overview', async ({ page }) => {
-    await expect(page).toHaveScreenshot('overview-connected.png');
+    await expectScreenshot(page, 'overview-connected.png');
   });
 
   test('account detail', async ({ page }) => {
@@ -116,7 +155,7 @@ test.describe('Connected account views', () => {
       await btn.click();
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('account-detail.png');
+    await expectScreenshot(page, 'account-detail.png');
   });
 
   test('transactions', async ({ page }) => {
@@ -125,7 +164,7 @@ test.describe('Connected account views', () => {
       await btn.click();
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('transactions.png');
+    await expectScreenshot(page, 'transactions.png');
   });
 });
 
@@ -135,13 +174,13 @@ test.describe('Connected account views', () => {
 
 test.describe('Themes', () => {
   test('dark theme (default)', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('theme-dark.png');
+    await expectScreenshot(page, 'theme-dark.png');
   });
 
   test('light theme', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
     // Toggle theme if the button exists
     const toggle = page.getByRole('button', { name: /light|theme|toggle/i }).first();
@@ -153,7 +192,7 @@ test.describe('Themes', () => {
       await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
       await page.waitForTimeout(100);
     }
-    await expect(page).toHaveScreenshot('theme-light.png');
+    await expectScreenshot(page, 'theme-light.png');
   });
 });
 
@@ -164,9 +203,9 @@ test.describe('Themes', () => {
 test.describe('Mobile layout', () => {
   test('connect panel at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('mobile-connect.png');
+    await expectScreenshot(page, 'mobile-connect.png');
   });
 });
 
@@ -176,18 +215,18 @@ test.describe('Mobile layout', () => {
 
 test.describe('Multisig', () => {
   test('setup panel', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
     const btn = page.getByRole('button', { name: /multisig/i }).first();
     if (await btn.count()) {
       await btn.click();
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('multisig-setup.png');
+    await expectScreenshot(page, 'multisig-setup.png');
   });
 
   test('sessions panel', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
     const ms = page.getByRole('button', { name: /multisig/i }).first();
     if (await ms.count()) {
@@ -198,6 +237,6 @@ test.describe('Multisig', () => {
       }
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('multisig-sessions.png');
+    await expectScreenshot(page, 'multisig-sessions.png');
   });
 });

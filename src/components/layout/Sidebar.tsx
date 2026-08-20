@@ -4,6 +4,7 @@ import { useStore } from '../../lib/store';
 import CopyableValue from '../dashboard/CopyableValue';
 import { NETWORKS, updateCustomNetworkConfig, switchToCustomProfile, loadCustomNetworkProfiles } from '../../lib/stellar';
 import { getActiveProfile } from '../../lib/userPreferences';
+import { useBehaviorAnalytics } from '../../hooks/useBehaviorAnalytics';
 
 const SESSION_API_KEY = 'stellar_custom_api_key';
 
@@ -57,8 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'portfolio', label: 'Portfolio', icon: '◐' },
   { id: 'charts', label: 'Charts', icon: '▤' },
   { id: 'analytics', label: 'Analytics', icon: '◍' },
-  { id: 'bridgeMonitor', label: 'Bridge Monitor', icon: '⇄' },
-  { id: 'qaSystem', label: 'AI QA System', icon: '⚛' },
+  { id: 'behaviorInsights', label: 'Personalization', icon: '◌' },
   { id: 'systemHealth', label: 'Health', icon: '⚕' },
   { id: 'dataExport', label: 'Export', icon: '⬇' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
@@ -79,6 +79,7 @@ export interface CustomProfile {
 
 export default function Sidebar({ isMobile = false }: SidebarProps) {
   const navigate = useNavigate();
+  const { snapshot: behaviorSnapshot } = useBehaviorAnalytics();
   const {
     activeTab,
     network,
@@ -94,6 +95,12 @@ export default function Sidebar({ isMobile = false }: SidebarProps) {
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [customHeaderName, setCustomHeaderName] = useState<string>('');
   const [customHeaderValue, setCustomHeaderValue] = useState<string>('');
+  const personalizedItems = behaviorSnapshot.consent.personalization
+    ? behaviorSnapshot.summary.topFeatures
+        .map(({ feature }) => NAV_ITEMS.find(item => item.id === feature))
+        .filter((item): item is NavItem & { id: string } => Boolean(item?.id))
+        .slice(0, 3)
+    : [];
 
   useEffect(() => {
     if (network === 'custom') {
@@ -358,6 +365,57 @@ export default function Sidebar({ isMobile = false }: SidebarProps) {
           style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}
         >
           <ul role="list" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {personalizedItems.length > 0 && (
+              <li role="presentation">
+                <div
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    color: 'var(--cyan)',
+                    padding: '8px 16px',
+                    letterSpacing: '1.2px',
+                  }}
+                  aria-hidden="true"
+                >
+                  FOR YOU
+                </div>
+              </li>
+            )}
+            {personalizedItems.map(item => {
+              const isActive = activeTab === item.id;
+              const isDisabled = item.id === 'faucet' && network === 'mainnet';
+              return (
+                <li key={`personalized-${item.id}`} role="presentation">
+                  <button
+                    onClick={() => !isDisabled && handleNavClick(item.id)}
+                    disabled={isDisabled}
+                    className="touch-target"
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-label={`Personalized shortcut: ${item.label}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      padding: '10px 16px',
+                      marginBottom: '1px',
+                      background: isActive ? 'var(--cyan-glow)' : 'transparent',
+                      border: `1px solid ${isActive ? 'var(--cyan-dim)' : 'transparent'}`,
+                      borderRadius: 'var(--radius-md)',
+                      color: isActive ? 'var(--cyan)' : 'var(--text-secondary)',
+                      fontSize: '13px',
+                      fontFamily: 'var(--font-mono)',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      textAlign: 'left',
+                      opacity: isDisabled ? 0.4 : 1,
+                    }}
+                  >
+                    <span aria-hidden="true" style={{ fontSize: '15px' }}>{item.icon}</span>
+                    {item.label}
+                  </button>
+                </li>
+              );
+            })}
             {NAV_ITEMS.map((item, i) => {
               if (item.type === 'header') {
                 return (

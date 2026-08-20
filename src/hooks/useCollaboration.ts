@@ -6,6 +6,7 @@ import {
   decodeSessionFromHash,
   broadcastStateChange,
 } from '../utils/stateSync';
+import { useBehaviorAnalytics } from './useBehaviorAnalytics';
 
 type SyncStatus = 'idle' | 'active' | 'error';
 type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -22,6 +23,7 @@ export function useCollaboration(
   store: CollaborationStore | null,
   options: { enableWebSocket?: boolean; wsUrl?: string } = {}
 ) {
+  const { track } = useBehaviorAnalytics();
   const { enableWebSocket = false, wsUrl } = options;
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
@@ -103,6 +105,11 @@ export function useCollaboration(
 
       ws.onopen = () => {
         setWsStatus('connected');
+        track({
+          type: 'collaboration',
+          name: 'collaboration_connected',
+          properties: { outcome: 'success', feature: 'websocket' },
+        });
         const state = store.getState();
         ws?.send(JSON.stringify({ type: 'STATE_HELLO', payload: buildShareableURL(state) }));
       };
@@ -133,13 +140,18 @@ export function useCollaboration(
       if (ws && ws.readyState < 2) ws.close();
       wsRef.current = null;
     };
-  }, [enableWebSocket, wsUrl, store]);
+  }, [enableWebSocket, wsUrl, store, track]);
 
   const generateShareLink = useCallback(() => {
     if (!store) return '';
     const state = store.getState();
     const url = buildShareableURL(state);
     setShareURL(url);
+    track({
+      type: 'collaboration',
+      name: 'share_link_created',
+      properties: { feature: 'share_link', outcome: 'success' },
+    });
 
     if (state.connectedAddress) {
       setShowPrivacyWarning(true);
@@ -148,7 +160,7 @@ export function useCollaboration(
     }
 
     return url;
-  }, [store]);
+  }, [store, track]);
 
   const copyShareLink = useCallback(async () => {
     const url = generateShareLink();
@@ -156,11 +168,16 @@ export function useCollaboration(
     try {
       await navigator.clipboard.writeText(url);
       setCopySuccess(true);
+      track({
+        type: 'collaboration',
+        name: 'share_link_copied',
+        properties: { feature: 'share_link', outcome: 'success' },
+      });
       setTimeout(() => setCopySuccess(false), 2500);
     } catch {
       console.warn('[useCollaboration] Clipboard write failed');
     }
-  }, [generateShareLink]);
+  }, [generateShareLink, track]);
 
   const dismissPrivacyWarning = useCallback(() => {
     setShowPrivacyWarning(false);

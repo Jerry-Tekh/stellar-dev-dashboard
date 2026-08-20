@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Trophy, Target, Clock, TrendingUp, Award, CheckCircle } from 'lucide-react';
 import tutorialSystem from '../../lib/tutorialSystem';
+import { useBehaviorAnalytics } from '../../hooks/useBehaviorAnalytics';
 
 /**
  * ProgressDashboard — Displays user's learning progress and achievements
@@ -10,6 +11,23 @@ export default function ProgressDashboard({ onClose }) {
   const overallProgress = tutorialSystem.getOverallProgress();
   const achievements = tutorialSystem.getAchievements();
   const categories = tutorialSystem.getCategories();
+  const { track } = useBehaviorAnalytics();
+
+  useEffect(() => {
+    track({
+      type: 'learning_progress',
+      name: 'progress_dashboard_viewed',
+      properties: {
+        level:
+          overallProgress.percentage >= 75
+            ? 'advanced'
+            : overallProgress.percentage >= 25
+              ? 'intermediate'
+              : 'new',
+        step: overallProgress.completed,
+      },
+    });
+  }, [overallProgress.completed, overallProgress.percentage, track]);
 
   // Calculate category progress
   const categoryProgress = categories.map(category => {

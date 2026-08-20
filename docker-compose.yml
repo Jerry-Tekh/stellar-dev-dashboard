@@ -28,6 +28,24 @@ services:
       timeout: 3s
       retries: 3
 
+  behavior-analytics:
+    build:
+      context: ./services/behavior-analytics
+    ports:
+      - "3101:3101"
+    environment:
+      - NODE_ENV=development
+      - PORT=3101
+      - ANALYTICS_PSEUDONYM_SALT=${ANALYTICS_PSEUDONYM_SALT:-replace-in-production}
+      - ANALYTICS_ADMIN_TOKEN=${ANALYTICS_ADMIN_TOKEN:-local-admin-token}
+      - ANALYTICS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3101/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
   app-dev:
     image: node:20-alpine
     working_dir: /app
