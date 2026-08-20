@@ -97,9 +97,8 @@ jobs:
           cache: npm
 
       - run: npm ci
-      # npm run test:e2e (`playwright test`) runs every project in playwright.config.ts —
-      # chromium, firefox, webkit, plus the chromium-based visual/mobile-chrome projects —
-      # so every browser engine needs to be installed here, not just chromium.
+      # Functional E2E runs on desktop engines and mobile Chromium. Visual snapshots
+      # are intentionally isolated in the visual-regression job with its baseline cache.
       - run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Build app
