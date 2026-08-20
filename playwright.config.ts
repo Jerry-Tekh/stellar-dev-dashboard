@@ -41,6 +41,9 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
+        video: 'off',
+        screenshot: 'off',
+        trace: 'off',
         // Disable CSS transitions/animations for stable screenshots
         contextOptions: { reducedMotion: 'reduce' },
       },

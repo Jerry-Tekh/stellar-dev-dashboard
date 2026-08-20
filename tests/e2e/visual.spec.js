@@ -17,6 +17,13 @@ async function waitForStable(page) {
   await page.waitForTimeout(500);
 }
 
+async function expectScreenshot(target, name, options = {}) {
+  // Live views cannot produce two byte-identical consecutive frames. Capture one
+  // animation-disabled frame and retain Playwright's configured pixel tolerance.
+  const image = await target.screenshot({ animations: 'disabled', timeout: 30_000, ...options });
+  expect(image).toMatchSnapshot(name, { maxDiffPixelRatio: 0.002 });
+}
+
 // ---------------------------------------------------------------------------
 // Connect Panel (unauthenticated landing)
 // ---------------------------------------------------------------------------
@@ -25,7 +32,7 @@ test.describe('Connect Panel', () => {
   test('default state', async ({ page }) => {
     await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('connect-panel.png');
+    await expectScreenshot(page, 'connect-panel.png');
   });
 
   test('invalid key error state', async ({ page }) => {
@@ -33,7 +40,7 @@ test.describe('Connect Panel', () => {
     await page.getByPlaceholder(/G\.\.\. public key/i).fill('BADKEY');
     await page.getByRole('button', { name: /connect/i }).click();
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('connect-panel-error.png');
+    await expectScreenshot(page, 'connect-panel-error.png');
   });
 });
 
@@ -45,7 +52,7 @@ test.describe('Layout', () => {
   test('sidebar', async ({ page }) => {
     await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page.locator('aside')).toHaveScreenshot('sidebar.png');
+    await expectScreenshot(page.locator('aside'), 'sidebar.png');
   });
 
   test('price ticker bar', async ({ page }) => {
@@ -54,10 +61,10 @@ test.describe('Layout', () => {
     // The price ticker is the first child of the main layout header area
     const ticker = page.locator('[data-testid="price-ticker"], .price-ticker').first();
     if (await ticker.count()) {
-      await expect(ticker).toHaveScreenshot('price-ticker.png');
+      await expectScreenshot(ticker, 'price-ticker.png');
     } else {
       // Fallback: top 80px strip of the viewport
-      await expect(page).toHaveScreenshot('price-ticker-fallback.png', {
+      await expectScreenshot(page, 'price-ticker-fallback.png', {
         clip: { x: 0, y: 0, width: 1280, height: 80 },
       });
     }
@@ -85,7 +92,7 @@ test.describe('Dashboard tabs', () => {
         await btn.click();
         await waitForStable(page);
       }
-      await expect(page).toHaveScreenshot(snapshot);
+      await expectScreenshot(page, snapshot);
     });
   }
 });
@@ -103,7 +110,7 @@ test.describe('Connected account views', () => {
   });
 
   test('overview', async ({ page }) => {
-    await expect(page).toHaveScreenshot('overview-connected.png');
+    await expectScreenshot(page, 'overview-connected.png');
   });
 
   test('account detail', async ({ page }) => {
@@ -112,7 +119,7 @@ test.describe('Connected account views', () => {
       await btn.click();
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('account-detail.png');
+    await expectScreenshot(page, 'account-detail.png');
   });
 
   test('transactions', async ({ page }) => {
@@ -121,7 +128,7 @@ test.describe('Connected account views', () => {
       await btn.click();
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('transactions.png');
+    await expectScreenshot(page, 'transactions.png');
   });
 });
 
@@ -133,7 +140,7 @@ test.describe('Themes', () => {
   test('dark theme (default)', async ({ page }) => {
     await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('theme-dark.png');
+    await expectScreenshot(page, 'theme-dark.png');
   });
 
   test('light theme', async ({ page }) => {
@@ -149,7 +156,7 @@ test.describe('Themes', () => {
       await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
       await page.waitForTimeout(100);
     }
-    await expect(page).toHaveScreenshot('theme-light.png');
+    await expectScreenshot(page, 'theme-light.png');
   });
 });
 
@@ -162,7 +169,7 @@ test.describe('Mobile layout', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/connect', { waitUntil: 'domcontentloaded' });
     await waitForStable(page);
-    await expect(page).toHaveScreenshot('mobile-connect.png');
+    await expectScreenshot(page, 'mobile-connect.png');
   });
 });
 
@@ -179,7 +186,7 @@ test.describe('Multisig', () => {
       await btn.click();
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('multisig-setup.png');
+    await expectScreenshot(page, 'multisig-setup.png');
   });
 
   test('sessions panel', async ({ page }) => {
@@ -194,6 +201,6 @@ test.describe('Multisig', () => {
       }
       await waitForStable(page);
     }
-    await expect(page).toHaveScreenshot('multisig-sessions.png');
+    await expectScreenshot(page, 'multisig-sessions.png');
   });
 });
