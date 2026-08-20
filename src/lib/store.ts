@@ -88,9 +88,11 @@ export interface StoreState {
   txNextCursor: string | null
   txHasMore: boolean
   txPagingLoading: boolean
+  txScrollPosition: number
   setTxNextCursor: (cursor: string | null) => void
   setTxHasMore: (hasMore: boolean) => void
   setTxPagingLoading: (v: boolean) => void
+  setTxScrollPosition: (pos: number) => void
   operations: Horizon.ServerApi.OperationRecord[]
   opsLoading: boolean
   setOperations: (ops: Horizon.ServerApi.OperationRecord[]) => void
@@ -99,9 +101,11 @@ export interface StoreState {
   opsNextCursor: string | null
   opsHasMore: boolean
   opsPagingLoading: boolean
+  opsScrollPosition: number
   setOpsNextCursor: (cursor: string | null) => void
   setOpsHasMore: (hasMore: boolean) => void
   setOpsPagingLoading: (v: boolean) => void
+  setOpsScrollPosition: (pos: number) => void
   networkStats: NetworkStats | null
   statsLoading: boolean
   setNetworkStats: (stats: NetworkStats | ((prev: NetworkStats | null) => NetworkStats)) => void
@@ -212,9 +216,11 @@ export const useStore = create<StoreState>((set, get) => ({
       txNextCursor: null,
       txHasMore: false,
       txPagingLoading: false,
+      txScrollPosition: 0,
       opsNextCursor: null,
       opsHasMore: false,
       opsPagingLoading: false,
+      opsScrollPosition: 0,
     })
   },
 
@@ -253,9 +259,11 @@ export const useStore = create<StoreState>((set, get) => ({
   txNextCursor: null,
   txHasMore: false,
   txPagingLoading: false,
+  txScrollPosition: 0,
   setTxNextCursor: (cursor) => set({ txNextCursor: cursor }),
   setTxHasMore: (hasMore) => set({ txHasMore: hasMore }),
   setTxPagingLoading: (v) => set({ txPagingLoading: v }),
+  setTxScrollPosition: (pos) => set({ txScrollPosition: pos }),
 
   operations: [],
   opsLoading: false,
@@ -269,9 +277,11 @@ export const useStore = create<StoreState>((set, get) => ({
   opsNextCursor: null,
   opsHasMore: false,
   opsPagingLoading: false,
+  opsScrollPosition: 0,
   setOpsNextCursor: (cursor) => set({ opsNextCursor: cursor }),
   setOpsHasMore: (hasMore) => set({ opsHasMore: hasMore }),
   setOpsPagingLoading: (v) => set({ opsPagingLoading: v }),
+  setOpsScrollPosition: (pos) => set({ opsScrollPosition: pos }),
 
   networkStats: null,
   statsLoading: false,
@@ -326,8 +336,16 @@ export const useStore = create<StoreState>((set, get) => ({
   })),
 
   comparisonSlots: [],
-  addComparisonSlot: () => set((state) => ({ comparisonSlots: [...state.comparisonSlots, { key: '', data: null, loading: false, error: null }] })),
-  removeComparisonSlot: (index) => set((state) => ({ comparisonSlots: state.comparisonSlots.filter((_, i) => i !== index) })),
+  addComparisonSlot: () => set((state) => (
+    state.comparisonSlots.length >= 5
+      ? state
+      : { comparisonSlots: [...state.comparisonSlots, { key: '', data: null, loading: false, error: null }] }
+  )),
+  removeComparisonSlot: (index) => set((state) => (
+    state.comparisonSlots.length <= 2
+      ? state
+      : { comparisonSlots: state.comparisonSlots.filter((_, i) => i !== index) }
+  )),
   reorderComparisonSlots: (orderedSlots) => set({ comparisonSlots: orderedSlots }),
   setComparisonKey: (index, key) => set((state) => {
     const next = [...state.comparisonSlots]
@@ -346,7 +364,7 @@ export const useStore = create<StoreState>((set, get) => ({
   }),
   setComparisonError: (index, error) => set((state) => {
     const next = [...state.comparisonSlots]
-    if (next[index]) next[index].error = error
+    if (next[index]) { next[index].error = error; next[index].data = null; }
     return { comparisonSlots: next }
   }),
 
@@ -389,7 +407,11 @@ export const useStore = create<StoreState>((set, get) => ({
   streamLedgers: [],
   streamError: null,
   setStreamStatus: (status) => set({ streamStatus: status }),
-  addStreamLedger: (l) => set((state) => ({ streamLedgers: [l, ...state.streamLedgers].slice(0, 50) })),
+  addStreamLedger: (l) => set((state) => (
+    state.streamLedgers.some((existing) => existing.sequence === l.sequence)
+      ? state
+      : { streamLedgers: [l, ...state.streamLedgers].slice(0, 50) }
+  )),
   clearStreamLedgers: () => set({ streamLedgers: [] }),
   setStreamError: (e) => set({ streamError: e }),
 }))

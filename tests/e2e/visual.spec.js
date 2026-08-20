@@ -12,9 +12,13 @@ const TESTNET_KEY = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
 
 /** Wait for the page to be visually stable (no pending network or animations). */
 async function waitForStable(page) {
-  await page.waitForLoadState('networkidle');
+  // 'networkidle' never resolves on views with any ongoing background
+  // activity (live price/ledger refreshes), so bound the wait instead of
+  // letting it consume the whole test timeout — best-effort settle, not a
+  // hard requirement.
+  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
   // Extra tick so CSS transitions triggered by load finish
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(300);
 }
 
 // ---------------------------------------------------------------------------
@@ -30,7 +34,7 @@ test.describe('Connect Panel', () => {
 
   test('invalid key error state', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('textbox').fill('BADKEY');
+    await page.getByPlaceholder(/G\.\.\. public key/i).fill('BADKEY');
     await page.getByRole('button', { name: /connect/i }).click();
     await waitForStable(page);
     await expect(page).toHaveScreenshot('connect-panel-error.png');
@@ -97,7 +101,7 @@ test.describe('Dashboard tabs', () => {
 test.describe('Connected account views', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('textbox').fill(TESTNET_KEY);
+    await page.getByPlaceholder(/G\.\.\. public key/i).fill(TESTNET_KEY);
     await page.getByRole('button', { name: /connect/i }).click();
     await waitForStable(page);
   });

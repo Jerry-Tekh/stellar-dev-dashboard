@@ -33,6 +33,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "multisig", label: "Multisig", icon: "⊕" },
   { id: "portfolio", label: "Portfolio", icon: "◐" },
   { id: "charts", label: "Charts", icon: "▤" },
+  { id: "bridgeMonitor", label: "Bridge Monitor", icon: "⇄" },
+  { id: "qaSystem", label: "AI QA System", icon: "⚛" },
 ];
 
 /**

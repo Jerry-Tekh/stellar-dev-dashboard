@@ -83,16 +83,20 @@ const TABS: Record<string, TabComponent> = {
   account: lazyTab(() => import('./components/dashboard/Account')),
   transactions: lazyTab(() => import('./components/dashboard/Transactions')),
   contracts: lazyTab(() => import('./components/dashboard/Contracts')),
+  contractStorage: lazyTab(() => import('./components/dashboard/ContractStorage')),
   network: lazyTab(() => import('./components/dashboard/NetworkStats')),
   builder: lazyTab(() => import('./components/dashboard/Builder')),
   faucet: lazyTab(() => import('./components/dashboard/Faucet')),
   compare: lazyTab(() => import('./components/dashboard/AccountComparison')),
+  watchlist: lazyTab(() => import('./components/dashboard/Watchlist')),
   wallet: lazyTab(() => import('./components/dashboard/WalletConnect')),
   signer: lazyTab(() => import('./components/dashboard/TransactionSigner')),
+  outbox: TransactionOutbox,
   portfolio: lazyTab(() => import('./components/dashboard/PortfolioValue')),
   txBuilder: lazyTab(() => import('./components/dashboard/TransactionBuilder')),
   contractInteraction: lazyTab(() => import('./components/dashboard/ContractInteraction')),
   contractABI: lazyTab(() => import('./components/dashboard/ContractABI')),
+  governance: lazyTab(() => import('./components/dashboard/Governance')),
   dex: lazyTab(() => import('./components/dashboard/DEXExplorer')),
   pathExplorer: lazyTab(() => import('./components/dashboard/PathExplorer')),
   explorers: lazyTab(() => import('./components/dashboard/ExplorerEmbed')),
@@ -112,6 +116,8 @@ const TABS: Record<string, TabComponent> = {
   liveActivity: lazyTab(() => import('./components/dashboard/LiveActivityFeed')),
   claimableBalances: lazyTab(() => import('./components/dashboard/ClaimableBalances')),
   dataExport: lazyTab(() => import('./components/dashboard/DataExport')),
+  bridgeMonitor: lazyTab(() => import('./components/dashboard/BridgeMonitor')),
+  qaSystem: lazyTab(() => import('./components/dashboard/QASystem')),
 }
 
 function TabLoadingFallback() {
@@ -208,6 +214,7 @@ function DashboardLayout() {
 
   useEffect(() => {
     pruneCaches().catch(() => {})
+    return initializeTransactionOutbox()
   }, [])
 
   useEffect(() => {
@@ -358,6 +365,7 @@ function DashboardLayout() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <NetworkIndicator />
             </div>
+            <TransactionOutboxBadge />
             <CopyLinkButton />
             <button
               onClick={() => setPreferencesOpen(true)}
@@ -385,7 +393,7 @@ function DashboardLayout() {
             <PriceTicker />
           </div>
           <ErrorBoundary onRetry={handleRetry} maxRetries={2}>
-            {!connectedAddress ? (
+            {!connectedAddress && activeTab !== 'outbox' ? (
               <ConnectPanel />
             ) : (
               <Suspense fallback={<TabLoadingFallback />}>

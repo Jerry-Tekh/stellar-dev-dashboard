@@ -57,7 +57,11 @@ export default defineConfig({
           if (id.includes('recharts')) return 'charts-vendor'
           if (id.includes('lucide-react')) return 'icons-vendor'
           if (id.includes('i18next')) return 'i18n'
-          if (id.includes('react')) return 'react-vendor'
+          // zustand and its use-sync-external-store dependency call React hooks
+          // directly, so they must share the same chunk as react itself —
+          // otherwise the cross-chunk React reference can end up unresolved.
+          if (id.includes('react') || id.includes('zustand') || id.includes('use-sync-external-store'))
+            return 'react-vendor'
           if (id.includes('date-fns')) return 'date-vendor'
 
           return 'vendor'

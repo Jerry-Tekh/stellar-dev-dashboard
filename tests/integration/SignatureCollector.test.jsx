@@ -5,9 +5,13 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import { createSession } from '../../src/lib/multisig';
 import { buildPaymentTransactionXdr } from '../__factories__';
 
+const mockStorage = vi.hoisted(() => new Map());
 vi.mock('../../src/lib/storage', () => ({
-  getStoredValue: vi.fn().mockResolvedValue(null),
-  setStoredValue: vi.fn(),
+  getStoredValue: vi.fn((key) => Promise.resolve(mockStorage.has(key) ? mockStorage.get(key) : null)),
+  setStoredValue: vi.fn((key, value) => {
+    mockStorage.set(key, value);
+    return Promise.resolve();
+  }),
 }));
 vi.mock('../../src/utils/stateSync', () => ({
   broadcastStateChange: vi.fn(),
@@ -46,6 +50,7 @@ describe('SignatureCollector (integration)', () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    mockStorage.clear();
     mockSuccess.mockClear();
     mockWarning.mockClear();
     mockError.mockClear();

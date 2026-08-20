@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import type { ReactNode } from 'react'
 import { useStore } from '../../lib/store'
 import { signTransactionWithFreighter } from '../../lib/wallet/freighter'
 import { signXdrWithLedger, isLedgerSupported, getActiveLedgerSession } from '../../lib/wallet/ledger'
@@ -7,6 +6,10 @@ import { NETWORKS } from '../../lib/stellar'
 import { measureAsync } from '../../lib/performanceMonitoring'
 import { loadPreferences, DEFAULT_PREFERENCES } from '../../lib/userPreferences'
 import type { UserPreferences } from '../../lib/userPreferences'
+import {
+  transactionOutbox,
+  type TransactionOutboxItem,
+} from '../../lib/transactionOutbox'
 import Card from './Card'
 import EnhancedTransactionConfirmation from '../security/EnhancedTransactionConfirmation'
 
@@ -20,6 +23,7 @@ export default function TransactionSigner() {
   const [ledgerPrompt, setLedgerPrompt] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
+  const [outboxItem, setOutboxItem] = useState<TransactionOutboxItem | null>(null)
 
   useEffect(() => {
     async function fetchPreferences() {
@@ -49,6 +53,7 @@ export default function TransactionSigner() {
     setSigning(true)
     setError(null)
     setSignedXdr(null)
+    setOutboxItem(null)
 
     try {
       let result: string | null = null
@@ -67,12 +72,21 @@ export default function TransactionSigner() {
         throw new Error('No wallet connected. Connect a wallet first.')
       }
 
-      setSignedXdr(result)
+      if (!result) throw new Error('The wallet did not return a signed transaction.')
+      await storeAndSubmit(result)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setSigning(false)
     }
+  }
+
+  const storeAndSubmit = async (signed: string) => {
+    // Persist first. enqueueAndSubmit never reaches Horizon until queue() has
+    // completed its IndexedDB transaction.
+    setSignedXdr(signed)
+    const item = await transactionOutbox.enqueueAndSubmit(signed, network)
+    setOutboxItem(item)
   }
 
   const handleConfirm = async () => {
@@ -117,7 +131,7 @@ export default function TransactionSigner() {
         ),
         { network, walletType: 'ledger' },
       )
-      setSignedXdr(signed as string)
+      await storeAndSubmit(signed as string)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -268,6 +282,45 @@ export default function TransactionSigner() {
 
         {signedXdr && (
           <div>
+            {outboxItem && (
+              <div
+                role="status"
+                style={{
+                  padding: '10px 12px',
+                  marginBottom: '12px',
+                  background:
+                    outboxItem.status === 'confirmed'
+                      ? 'var(--green-glow, rgba(34,197,94,0.1))'
+                      : 'var(--amber-glow, rgba(245,158,11,0.1))',
+                  border: `1px solid ${
+                    outboxItem.status === 'confirmed'
+                      ? 'var(--green)'
+                      : 'var(--amber, #f59e0b)'
+                  }`,
+                  borderRadius: 'var(--radius-md)',
+                  color:
+                    outboxItem.status === 'confirmed'
+                      ? 'var(--green)'
+                      : 'var(--amber, #f59e0b)',
+                  fontSize: '12px',
+                  lineHeight: 1.5,
+                }}
+              >
+                {outboxItem.status === 'confirmed' &&
+                  `Submitted and confirmed${
+                    outboxItem.ledger ? ` in ledger ${outboxItem.ledger}` : ''
+                  }.`}
+                {outboxItem.status === 'queued' &&
+                  'Signed and safely queued. It will submit automatically when connectivity returns.'}
+                {outboxItem.status === 'failed' &&
+                  `Signed and saved, but Horizon rejected the submission: ${
+                    outboxItem.error || 'Unknown error'
+                  }`}
+                {outboxItem.status === 'expired' &&
+                  'Signed and saved, but its transaction time bound has already expired.'}
+                {outboxItem.status === 'submitting' && 'Signed, saved, and submitting…'}
+              </div>
+            )}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '6px',

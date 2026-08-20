@@ -24,6 +24,11 @@ const originalCreateElement = document.createElement.bind(document);
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  // vi.restoreAllMocks() only restores spies to their original implementation;
+  // it doesn't clear call history on plain vi.fn() mocks, so clear those explicitly.
+  revokeObjectURL.mockClear();
+  createObjectURL.mockClear();
+  click.mockClear();
 
   vi.stubGlobal('URL', {
   createObjectURL,

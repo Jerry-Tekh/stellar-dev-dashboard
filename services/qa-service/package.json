@@ -1,0 +1,19 @@
+{
+  "name": "qa-service",
+  "version": "1.0.0",
+  "description": "AI-powered testing and QA microservice for Stellar Dev Dashboard",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import 'fake-indexeddb/auto';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { 
   parseContractWasm, 
@@ -113,9 +114,7 @@ describe('Contract Invoker Flows', () => {
     });
 
     it('successfully maps all supported parameter types and simulates/sends transaction', async () => {
-      mockSorobanServer.prepareTransaction.mockResolvedValue({
-        sign: vi.fn(),
-      });
+      mockSorobanServer.prepareTransaction.mockImplementation(async (transaction) => transaction);
       mockSorobanServer.sendTransaction.mockResolvedValue({
         hash: 'mock-tx-hash',
         status: 'PENDING',

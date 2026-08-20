@@ -94,7 +94,6 @@ export class ContractDeployer {
         status: 'pending',
         sourceAccount,
         contractId,
-        txHash,
         constructorArgsCount: normalizedArgs.length,
         timestamp: Date.now(),
         networkUsed: 'mainnet',

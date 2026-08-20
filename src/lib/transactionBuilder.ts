@@ -1,7 +1,8 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getServer, NETWORKS, isValidPublicKey, type NetworkName } from "./stellar";
-import { measureAsync, recordCustomMetric } from "./performanceMonitoring";
+import { recordCustomMetric } from "./performanceMonitoring";
 import { SecretKeyHandle } from "./SecretKeyHandle";
+import { transactionOutbox } from "./transactionOutbox";
 
 export { SecretKeyHandle };
 
@@ -478,16 +479,11 @@ export async function signAndSubmitTransaction(
     signer: "local-keypair",
   });
 
-  const server = getServer(network);
-  const response = await measureAsync(
-    "TRANSACTION_SUBMIT_DURATION",
-    () => server.submitTransaction(transaction),
-    { network, operationCount: transaction.operations?.length || 0 },
-  );
+  const response = await transactionOutbox.enqueueAndSubmit(transaction.toXDR(), network);
 
   return {
-    hash: response.hash,
+    hash: response.hash || transaction.hash().toString("hex"),
     ledger: response.ledger,
-    successful: response.successful,
+    successful: response.status === "confirmed" && (response.successful ?? true),
   };
 }

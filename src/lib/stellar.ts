@@ -1205,13 +1205,20 @@ export async function invokeContract(params: InvokeContractParams): Promise<Cont
 
   prepared.sign(keypair);
 
-  const response = await server.sendTransaction(prepared);
+  const { transactionOutbox } = await import('./transactionOutbox');
+  const response = await transactionOutbox.enqueueAndSubmit(
+    prepared.toXDR(),
+    network,
+    'soroban',
+  );
 
   return {
-    hash: response.hash,
-    status: response.status,
-    errorResult: response.errorResult ? response.errorResult.toXDR('base64') : null,
-    diagnosticEvents: (response.diagnosticEvents || []).map((event) => event.toXDR('base64')),
+    hash: response.hash || prepared.hash().toString('hex'),
+    status: (
+      response.status === 'confirmed' ? 'PENDING' : response.status.toUpperCase()
+    ) as StellarSdk.SorobanRpc.Api.SendTransactionStatus,
+    errorResult: response.status === 'failed' ? response.error || null : null,
+    diagnosticEvents: [],
   };
 }
 
@@ -1445,7 +1452,7 @@ export function isValidEd25519PublicKey(key: string): boolean {
 export function isValidMuxedAccount(key: string): boolean {
   if (!key || typeof key !== 'string') return false
   try {
-    return StellarSdk.StrKey.isValidEd25519PublicKey(key) || key.startsWith('M');
+    return StellarSdk.StrKey.isValidMed25519PublicKey(key);
   } catch {
     return false;
   }
@@ -1455,7 +1462,7 @@ export function isValidMuxedAccount(key: string): boolean {
  * Check if address is a federated address (name*domain or name@domain)
  */
 export function isFederatedAddress(input: string): boolean {
-  return typeof input === 'string' && /^[a-zA-Z0-9._-]+\*[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(input);
+  return typeof input === 'string' && /^[a-zA-Z0-9._-]+[*@][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(input);
 }
 
 /**
