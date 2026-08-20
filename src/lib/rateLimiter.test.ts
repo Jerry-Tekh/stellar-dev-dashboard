@@ -5,7 +5,7 @@ describe('RateLimiter', () => {
   // Keep a reference to every limiter created in a test so we can destroy it
   // (clearInterval on the cleanup timer) before restoring fake timers.
   const limiters: RateLimiter[] = []
-  const make = (opts?: Parameters<typeof RateLimiter['prototype']['constructor']>[0]) => {
+  const make = (opts?: ConstructorParameters<typeof RateLimiter>[0]) => {
     const l = new RateLimiter(opts)
     limiters.push(l)
     return l
