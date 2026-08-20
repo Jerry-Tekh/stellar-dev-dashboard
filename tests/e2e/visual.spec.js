@@ -10,6 +10,31 @@ import { test, expect } from '@playwright/test';
 
 const TESTNET_KEY = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
 
+test.beforeEach(async ({ page }) => {
+  // Visual tests must not depend on live ledger/price responses or motion timing.
+  // Install the deterministic environment before any application script runs.
+  await page.addInitScript(() => {
+    Math.random = () => 0.5;
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent = `
+        *, *::before, *::after {
+          animation: none !important;
+          caret-color: transparent !important;
+          transition: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+    });
+  });
+  await page.clock.setFixedTime(new Date('2026-01-01T00:00:00.000Z'));
+  await page.route(/^https?:\/\//, async (route) => {
+    const hostname = new URL(route.request().url()).hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') await route.continue();
+    else await route.abort('blockedbyclient');
+  });
+});
+
 /** Wait for the page to be visually stable (no pending network or animations). */
 async function waitForStable(page) {
   // Live price and ledger views intentionally poll, so networkidle is unreachable.
@@ -18,9 +43,20 @@ async function waitForStable(page) {
 }
 
 async function expectScreenshot(target, name, options = {}) {
-  // Live views cannot produce two byte-identical consecutive frames. Capture one
-  // animation-disabled frame and retain Playwright's configured pixel tolerance.
-  const image = await target.screenshot({ animations: 'disabled', timeout: 30_000, ...options });
+  // This suite is Chromium-only. Capture through CDP to avoid Playwright's
+  // animation/actionability pipeline, which deadlocks on the live ticker.
+  const isLocator = typeof target.page === 'function';
+  const page = isLocator ? target.page() : target;
+  const elementClip = isLocator ? await target.boundingBox() : null;
+  if (isLocator && !elementClip) throw new Error(`Cannot capture hidden snapshot target: ${name}`);
+  const clip = options.clip ?? elementClip;
+  const session = await page.context().newCDPSession(page);
+  const { data } = await session.send('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: false,
+    ...(clip ? { clip: { ...clip, scale: 1 } } : {}),
+  });
+  const image = Buffer.from(data, 'base64');
   expect(image).toMatchSnapshot(name, { maxDiffPixelRatio: 0.002 });
 }
 
