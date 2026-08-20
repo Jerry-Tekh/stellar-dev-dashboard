@@ -70,3 +70,15 @@ services:
       - MONITOR_API_KEY=${MONITOR_API_KEY:-}
     restart: unless-stopped
     profiles: [monitoring]
+
+  sentiment-analysis:
+    build:
+      context: .
+      dockerfile: services/sentiment-analysis/Dockerfile
+    ports:
+      - "8790:8790"
+    environment:
+      - SENTIMENT_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
+      - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-}
+    restart: unless-stopped
+    profiles: [sentiment]

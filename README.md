@@ -170,3 +170,6 @@ Pull requests are welcome. Check open issues to find something to work on.
 ## License
 
 MIT
+# Market Sentiment Intelligence
+
+The dashboard includes a credibility-weighted Stellar sentiment workspace at `/marketSentiment`, with source/language/aspect breakdowns, trend and price correlation, viral signals, alerts, and an optional REST ingestion service. See [the methodology and deployment guide](docs/market-sentiment.md).

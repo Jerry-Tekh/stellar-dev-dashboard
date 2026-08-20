@@ -81,6 +81,9 @@ jobs:
       - name: Test network monitoring service
         run: npm run test:network-monitor
 
+      - name: Test sentiment analysis service
+        run: npm run test:sentiment-service
+
       - name: Upload coverage report
         if: matrix.node-version == '20'
         uses: codecov/codecov-action@v7
