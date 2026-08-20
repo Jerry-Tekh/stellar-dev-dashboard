@@ -5,6 +5,7 @@ import ThemeSettings from './ThemeSettings'
 import AccessibilitySettings from '../accessibility/AccessibilitySettings'
 import { showTestNotification } from '../../utils/offline'
 import { Bell } from 'lucide-react'
+import { useBehaviorAnalytics } from '../../hooks/useBehaviorAnalytics'
 
 const TABS = [
   { id: 'general', label: 'General' },
@@ -17,9 +18,15 @@ export default function UserPreferences({ onClose }) {
   const { preferences, update, reset, loading } = usePreferences()
   const [activeTab, setActiveTab] = useState('general')
   const [saved, setSaved] = useState(false)
+  const { track } = useBehaviorAnalytics()
 
   const handleChange = async (key, value) => {
     await update(key, value)
+    track({
+      type: 'preference_change',
+      name: 'preference_updated',
+      properties: { feature: key },
+    })
     setSaved(true)
     setTimeout(() => setSaved(false), 1500)
   }

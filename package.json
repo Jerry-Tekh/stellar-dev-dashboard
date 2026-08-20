@@ -27,6 +27,8 @@
     "test:visual": "playwright test --project=visual",
     "test:visual:update": "playwright test --project=visual --update-snapshots",
     "test:visual:report": "playwright show-report tests/e2e/report",
+    "test:analytics-service": "npm test --prefix services/behavior-analytics",
+    "load:test:analytics": "k6 run services/behavior-analytics/load/k6.js",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

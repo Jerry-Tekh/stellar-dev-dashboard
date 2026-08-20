@@ -57,8 +57,9 @@ export default function AnalyticsConsentBanner() {
           }}
         >
           Essential storage keeps your privacy choice. Usage analytics records coarse feature names
-          and outcomes. Personalization derives an on-device persona and recommendations. Nothing is
-          sent to an analytics provider by this feature.
+          and outcomes. Personalization derives an on-device persona and recommendations. If this
+          deployment enables the first-party analytics service, sanitized events are synchronized
+          there; the Privacy controls page always shows the current sync mode.
         </div>
       )}
 

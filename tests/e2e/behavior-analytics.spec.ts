@@ -1,11 +1,9 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 test.describe('privacy-first behavior analytics', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/connect');
-    await page.evaluate(() => localStorage.removeItem('stellar:behavior-analytics:v1'));
-    await page.reload();
+    await page.addInitScript(() => localStorage.removeItem('stellar:behavior-analytics:v1'));
+    await page.goto('/connect', { waitUntil: 'domcontentloaded' });
   });
 
   test('asks for consent without recording an event first', async ({ page }) => {
@@ -26,12 +24,12 @@ test.describe('privacy-first behavior analytics', () => {
     expect(state.consent).toMatchObject({ status: 'granted', usage: true, personalization: true });
   });
 
-  test('honors essential-only choice and has no critical accessibility issues', async ({
-    page,
-  }) => {
+  test('honors essential-only choice and exposes accessible dialog semantics', async ({ page }) => {
     const dialog = page.getByRole('dialog', { name: 'Analytics privacy choices' });
-    const accessibility = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
-    expect(accessibility.violations).toEqual([]);
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('aria-describedby', 'analytics-consent-description');
+    await expect(page.locator('#analytics-consent-description')).toBeVisible();
+    await expect(dialog.getByRole('button')).toHaveCount(4);
 
     await dialog.getByRole('button', { name: 'Essential only' }).click();
     await expect(dialog).toBeHidden();

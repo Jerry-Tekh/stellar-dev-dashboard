@@ -119,6 +119,14 @@ export interface AnalyticsSnapshot {
   privateAggregates: PrivateAggregate[];
   storageBytes: number;
   retainedUntil: string | null;
+  remoteSync: RemoteSyncState;
+}
+
+export interface RemoteSyncState {
+  enabled: boolean;
+  status: 'local-only' | 'idle' | 'syncing' | 'synced' | 'error';
+  lastSyncedAt: string | null;
+  error: string | null;
 }
 
 export interface AnalyticsExport {

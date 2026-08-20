@@ -1,5 +1,3 @@
-/* global clients */
-
 /**
  * Stellar Dev Dashboard — Service Worker
  * Caches the app shell (HTML + static assets) for offline use.

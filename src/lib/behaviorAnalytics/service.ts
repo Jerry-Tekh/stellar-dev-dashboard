@@ -7,7 +7,9 @@ import type {
   ExperimentAssignment,
   ExperimentDefinition,
   TrackEventInput,
+  RemoteSyncState,
 } from '../../types/behaviorAnalytics';
+import { behaviorAnalyticsApi, initialRemoteState, type BehaviorAnalyticsApi } from './remote';
 import {
   buildRecommendations,
   calculateExperimentResults,
@@ -98,11 +100,17 @@ export class BehaviorAnalyticsService {
   private state: AnalyticsStorageState;
   private readonly sessionId = newId('session');
   private listeners = new Set<() => void>();
+  private remoteSync: RemoteSyncState;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(state?: AnalyticsStorageState) {
+  constructor(
+    state?: AnalyticsStorageState,
+    private readonly api: BehaviorAnalyticsApi = behaviorAnalyticsApi
+  ) {
     this.state = state
       ? { ...state, events: pruneEvents(state.events), assignments: [...state.assignments] }
       : initialState();
+    this.remoteSync = initialRemoteState(api.enabled);
   }
 
   subscribe(listener: () => void): () => void {
@@ -116,6 +124,7 @@ export class BehaviorAnalyticsService {
 
   setConsent(usage: boolean, personalization: boolean): AnalyticsConsent {
     const now = new Date().toISOString();
+    const previousId = this.state.pseudonymousId;
     this.state.consent = {
       status: usage ? 'granted' : 'denied',
       usage,
@@ -127,8 +136,10 @@ export class BehaviorAnalyticsService {
       this.state.events = [];
       this.state.assignments = [];
       this.state.pseudonymousId = newId('visitor');
+      if (this.api.enabled) void this.api.erase(previousId).catch(() => undefined);
     }
     this.persistAndNotify();
+    if (usage) this.scheduleRemoteSync();
     return this.getConsent();
   }
 
@@ -144,6 +155,7 @@ export class BehaviorAnalyticsService {
     };
     this.state.events = pruneEvents([...this.state.events, event]);
     this.persistAndNotify();
+    this.scheduleRemoteSync();
     return { ...event, properties: { ...event.properties } };
   }
 
@@ -177,6 +189,7 @@ export class BehaviorAnalyticsService {
       privateAggregates: buildPrivateAggregates(events),
       storageBytes: new Blob([serialized]).size,
       retainedUntil,
+      remoteSync: { ...this.remoteSync },
     };
   }
 
@@ -224,6 +237,7 @@ export class BehaviorAnalyticsService {
   }
 
   eraseData(): void {
+    const previousId = this.state.pseudonymousId;
     this.state = {
       schemaVersion: 1,
       pseudonymousId: newId('visitor'),
@@ -237,6 +251,30 @@ export class BehaviorAnalyticsService {
       } catch {
         // The in-memory copy has still been erased.
       }
+    }
+    if (this.api.enabled) void this.api.erase(previousId).catch(() => undefined);
+    this.notify();
+  }
+
+  async syncRemote(): Promise<void> {
+    if (!this.api.enabled || !this.state.consent.usage) return;
+    this.remoteSync = { ...this.remoteSync, status: 'syncing', error: null };
+    this.notify();
+    try {
+      await this.api.updateConsent(this.state.pseudonymousId, this.state.consent);
+      await this.api.ingest(this.state.pseudonymousId, this.state.events);
+      this.remoteSync = {
+        enabled: true,
+        status: 'synced',
+        lastSyncedAt: new Date().toISOString(),
+        error: null,
+      };
+    } catch {
+      this.remoteSync = {
+        ...this.remoteSync,
+        status: 'error',
+        error: 'Remote analytics is temporarily unavailable. Local insights are unaffected.',
+      };
     }
     this.notify();
   }
@@ -255,6 +293,14 @@ export class BehaviorAnalyticsService {
       }
     }
     this.notify();
+  }
+
+  private scheduleRemoteSync(): void {
+    if (!this.api.enabled || this.syncTimer) return;
+    this.syncTimer = setTimeout(() => {
+      this.syncTimer = null;
+      void this.syncRemote();
+    }, 1_000);
   }
 
   private notify(): void {

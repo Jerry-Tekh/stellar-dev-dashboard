@@ -20,8 +20,34 @@ export function useBehaviorAnalytics() {
   );
   const eraseData = useCallback(() => behaviorAnalytics.eraseData(), []);
   const exportData = useCallback(() => behaviorAnalytics.exportData(), []);
+  const syncRemote = useCallback(() => behaviorAnalytics.syncRemote(), []);
+  const getExperimentAssignment = useCallback(
+    (experiment: Parameters<typeof behaviorAnalytics.getExperimentAssignment>[0]) =>
+      behaviorAnalytics.getExperimentAssignment(experiment),
+    []
+  );
+  const recordExperimentExposure = useCallback(
+    (experimentId: string, variantId: string) =>
+      behaviorAnalytics.recordExperimentExposure(experimentId, variantId),
+    []
+  );
+  const recordExperimentConversion = useCallback(
+    (experimentId: string, variantId: string) =>
+      behaviorAnalytics.recordExperimentConversion(experimentId, variantId),
+    []
+  );
 
-  return { snapshot, track, updateConsent, eraseData, exportData };
+  return {
+    snapshot,
+    track,
+    updateConsent,
+    eraseData,
+    exportData,
+    syncRemote,
+    getExperimentAssignment,
+    recordExperimentExposure,
+    recordExperimentConversion,
+  };
 }
 
 export default useBehaviorAnalytics;

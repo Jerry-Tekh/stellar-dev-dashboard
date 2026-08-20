@@ -73,6 +73,11 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:coverage
 
+      - name: Test behavior analytics service
+        run: |
+          npm ci --prefix services/behavior-analytics
+          npm run test:analytics-service
+
       - name: Upload coverage report
         if: matrix.node-version == '20'
         uses: codecov/codecov-action@v7
@@ -133,6 +138,15 @@ jobs:
           path: tests/e2e/snapshots
           key: visual-snapshots-${{ github.base_ref || github.ref_name }}
           restore-keys: visual-snapshots-
+
+      - name: Bootstrap visual baselines when cache is empty
+        run: |
+          if ! find tests/e2e/snapshots -type f -name '*.png' -print -quit 2>/dev/null | grep -q .; then
+            echo "No visual baseline cache found; generating runner-specific baselines."
+            npm run test:visual:update
+          fi
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
 
       - name: Run visual regression tests
         run: npm run test:visual

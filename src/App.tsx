@@ -56,6 +56,10 @@ import PWAInstallBanner from './components/PWAInstallBanner'
 import { useSwipeGesture } from './hooks/useSwipeGesture'
 import { useBehaviorAnalytics } from './hooks/useBehaviorAnalytics'
 import AnalyticsConsentBanner from './components/analytics/AnalyticsConsentBanner'
+import TransactionOutbox, {
+  TransactionOutboxBadge,
+} from './components/dashboard/TransactionOutbox'
+import { initializeTransactionOutbox } from './lib/transactionOutbox'
 
 interface SearchResult {
   type?: string

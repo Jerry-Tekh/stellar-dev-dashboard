@@ -5,6 +5,7 @@ import AdvancedTransactionSimulation from './AdvancedTransactionSimulation'
 import { StatCard } from './Card'
 import { Plus, Trash2, Play, Copy, AlertCircle, CheckCircle } from 'lucide-react'
 import type { BuilderOperation as DashboardBuilderOperation } from './types'
+import { useBehaviorAnalytics } from '../../hooks/useBehaviorAnalytics'
 
 const OPERATION_TYPES = [
   { id: 'payment', label: 'Payment', icon: '→' },
@@ -17,6 +18,7 @@ const OPERATION_TYPES = [
 
 export default function Builder() {
   const { network } = useStore()
+  const { track } = useBehaviorAnalytics()
   const [operations, setOperations] = useState<DashboardBuilderOperation[]>([])
   const [memo, setMemo] = useState('')
   const [baseFee, setBaseFee] = useState('100')
@@ -76,6 +78,11 @@ export default function Builder() {
     }
     
     setOperations([...operations, newOp])
+    track({
+      type: 'transaction_workflow',
+      name: 'operation_added',
+      properties: { workflow: type, outcome: 'started', network },
+    })
   }
 
   const updateOperation = (id: number, field: string, value: string) => {
@@ -108,8 +115,18 @@ export default function Builder() {
         network
       })
       setSimulation(result)
+      track({
+        type: 'transaction_workflow',
+        name: 'transaction_simulation',
+        properties: { workflow: 'simulation', outcome: result.success ? 'success' : 'failure', network },
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Simulation failed')
+      track({
+        type: 'transaction_workflow',
+        name: 'transaction_simulation',
+        properties: { workflow: 'simulation', outcome: 'failure', network },
+      })
     } finally {
       setIsSimulating(false)
     }
@@ -133,9 +150,19 @@ export default function Builder() {
       
       await navigator.clipboard.writeText(xdr)
       setSuccess('Transaction XDR copied to clipboard!')
+      track({
+        type: 'transaction_workflow',
+        name: 'transaction_export',
+        properties: { workflow: 'xdr_export', outcome: 'success', network },
+      })
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed')
+      track({
+        type: 'transaction_workflow',
+        name: 'transaction_export',
+        properties: { workflow: 'xdr_export', outcome: 'failure', network },
+      })
     }
   }
 

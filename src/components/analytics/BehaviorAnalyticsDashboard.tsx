@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBehaviorAnalytics } from '../../hooks/useBehaviorAnalytics';
 import type {
@@ -319,7 +319,15 @@ function RecommendationCard({
   );
 }
 
-function PersonalizationView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
+function PersonalizationView({
+  snapshot,
+  variant,
+  onConversion,
+}: {
+  snapshot: AnalyticsSnapshot;
+  variant: string;
+  onConversion: () => void;
+}) {
   const navigate = useNavigate();
   const { track } = useBehaviorAnalytics();
   const open = (item: PersonalizationRecommendation) => {
@@ -328,6 +336,7 @@ function PersonalizationView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
       name: 'recommendation_opened',
       properties: { feature: item.actionTab, source: item.id },
     });
+    onConversion();
     navigate(`/${item.actionTab}`);
   };
 
@@ -361,7 +370,10 @@ function PersonalizationView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          gridTemplateColumns:
+            variant === 'compact'
+              ? 'repeat(auto-fit, minmax(300px, 1fr))'
+              : 'repeat(auto-fit, minmax(230px, 1fr))',
           gap: '12px',
         }}
       >
@@ -416,7 +428,7 @@ function PersonalizationView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
 }
 
 function PrivacyView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
-  const { updateConsent, eraseData, exportData } = useBehaviorAnalytics();
+  const { updateConsent, eraseData, exportData, syncRemote } = useBehaviorAnalytics();
   const [notice, setNotice] = useState('');
   const [usage, setUsage] = useState(snapshot.consent.usage);
   const [personalization, setPersonalization] = useState(snapshot.consent.personalization);
@@ -543,7 +555,26 @@ function PrivacyView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
                 ? new Date(snapshot.retainedUntil).toLocaleDateString()
                 : 'No events'}
             </dd>
+            <dt>Analytics service</dt>
+            <dd style={{ textTransform: 'capitalize' }}>
+              {snapshot.remoteSync.status.replace('-', ' ')}
+            </dd>
           </dl>
+          {snapshot.remoteSync.enabled && (
+            <button
+              type="button"
+              onClick={() => void syncRemote()}
+              disabled={snapshot.remoteSync.status === 'syncing'}
+              style={{ ...button, marginTop: '14px' }}
+            >
+              {snapshot.remoteSync.status === 'syncing' ? 'Syncing…' : 'Sync now'}
+            </button>
+          )}
+          {snapshot.remoteSync.error && (
+            <p role="status" style={{ color: 'var(--amber)', fontSize: '10px', marginTop: '8px' }}>
+              {snapshot.remoteSync.error}
+            </p>
+          )}
         </section>
         <section style={card}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '14px' }}>Your data rights</h2>
@@ -592,8 +623,8 @@ function PrivacyView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
             for reporting.
           </li>
           <li>
-            The random visitor identifier is pseudonymous, remains local, and rotates whenever data
-            is erased or consent is withdrawn.
+            The random visitor identifier is pseudonymous and rotates whenever data is erased or
+            consent is withdrawn. A configured first-party service stores only its salted hash.
           </li>
           <li>
             Raw events are capped at 2,000 and expire after 30 days; no third-party analytics SDK is
@@ -606,8 +637,16 @@ function PrivacyView({ snapshot }: { snapshot: AnalyticsSnapshot }) {
 }
 
 export default function BehaviorAnalyticsDashboard() {
-  const { snapshot, updateConsent } = useBehaviorAnalytics();
+  const {
+    snapshot,
+    updateConsent,
+    getExperimentAssignment,
+    recordExperimentExposure,
+    recordExperimentConversion,
+  } = useBehaviorAnalytics();
   const [view, setView] = useState<View>('insights');
+  const [recommendationVariant, setRecommendationVariant] = useState('control');
+  const exposureRecorded = useRef(false);
   const tabs = useMemo(
     () =>
       [
@@ -617,6 +656,25 @@ export default function BehaviorAnalyticsDashboard() {
       ] as const,
     []
   );
+
+  useEffect(() => {
+    if (!snapshot.consent.personalization) return;
+    const assignment = getExperimentAssignment({
+      id: 'recommendation-layout',
+      name: 'Recommendation layout engagement',
+      active: true,
+      variants: [
+        { id: 'control', weight: 1 },
+        { id: 'compact', weight: 1 },
+      ],
+    });
+    if (!assignment) return;
+    setRecommendationVariant(assignment.variantId);
+    if (!exposureRecorded.current) {
+      exposureRecorded.current = true;
+      recordExperimentExposure(assignment.experimentId, assignment.variantId);
+    }
+  }, [snapshot.consent.personalization, getExperimentAssignment, recordExperimentExposure]);
 
   return (
     <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -684,7 +742,15 @@ export default function BehaviorAnalyticsDashboard() {
         <EmptyInsights onEnable={() => updateConsent(true, true)} />
       )}
       {view === 'insights' && <InsightsView snapshot={snapshot} />}
-      {view === 'personalization' && <PersonalizationView snapshot={snapshot} />}
+      {view === 'personalization' && (
+        <PersonalizationView
+          snapshot={snapshot}
+          variant={recommendationVariant}
+          onConversion={() =>
+            recordExperimentConversion('recommendation-layout', recommendationVariant)
+          }
+        />
+      )}
       {view === 'privacy' && <PrivacyView snapshot={snapshot} />}
     </div>
   );
