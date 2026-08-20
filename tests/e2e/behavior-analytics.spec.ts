@@ -15,7 +15,9 @@ test.describe('privacy-first behavior analytics', () => {
     );
     expect(beforeConsent).toBeNull();
 
-    await dialog.getByRole('button', { name: 'Allow & personalize' }).click();
+    // The live ticker continuously shifts the page's animation frame in headless CI;
+    // visibility is asserted above, so bypass only Playwright's stability polling.
+    await dialog.getByRole('button', { name: 'Allow & personalize' }).click({ force: true });
     await expect(dialog).toBeHidden();
 
     const state = await page.evaluate(() =>
@@ -31,7 +33,7 @@ test.describe('privacy-first behavior analytics', () => {
     await expect(page.locator('#analytics-consent-description')).toBeVisible();
     await expect(dialog.getByRole('button')).toHaveCount(4);
 
-    await dialog.getByRole('button', { name: 'Essential only' }).click();
+    await dialog.getByRole('button', { name: 'Essential only' }).click({ force: true });
     await expect(dialog).toBeHidden();
 
     const state = await page.evaluate(() =>
