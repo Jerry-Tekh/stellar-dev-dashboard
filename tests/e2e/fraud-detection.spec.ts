@@ -14,6 +14,7 @@ async function openFraudDetection(page: Page) {
       })
     )
     localStorage.setItem('tutorial_state', JSON.stringify({ completed_welcome: Date.now() }))
+    localStorage.setItem('stellar-dashboard-theme', 'dark')
     document.addEventListener('DOMContentLoaded', () => {
       const style = document.createElement('style')
       style.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'
@@ -41,7 +42,7 @@ async function openFraudDetection(page: Page) {
 test.describe('fraud detection operator workflow', () => {
   test('investigates and acknowledges an explainable alert', async ({ page }) => {
     await openFraudDetection(page)
-    await page.getByRole('button', { name: 'alerts' }).click()
+    await page.getByRole('button', { name: 'alerts', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Investigation queue' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Acknowledge' }).first().click()
@@ -49,7 +50,7 @@ test.describe('fraud detection operator workflow', () => {
       'acknowledged'
     )
 
-    await page.getByRole('button', { name: 'Evidence' }).first().click()
+    await page.getByRole('button', { name: 'Evidence', exact: true }).first().click()
     await expect(page.getByRole('dialog', { name: 'Fraud assessment details' })).toBeVisible()
     await expect(page.getByText(/Signals contributing to this score/i)).toBeVisible()
     await page.getByRole('button', { name: 'Close details' }).click()
