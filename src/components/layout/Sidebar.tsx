@@ -33,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'network', label: 'Network Info', icon: '◎' },
   { id: 'networkIntelligence', label: 'Intelligence', icon: '◈' },
   { id: 'marketSentiment', label: 'Sentiment', icon: '◔' },
+  { id: 'docAnalysis', label: 'Doc Analysis', icon: '❖' },
   { id: 'realtime', label: 'Real-Time', icon: '◉' },
   { id: 'liveActivity', label: 'Live Activity', icon: '⚡' },
   { id: 'cacheStats', label: 'Cache Stats', icon: '⊞' },
@@ -44,7 +45,12 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'txSimulator', label: 'Simulator', icon: '▷' },
   { id: 'advancedSim', label: 'Advanced Sim', icon: '⚡' },
   { id: 'faucet', label: 'Faucet', icon: '⬡' },
-  
+
+  { type: 'header', label: 'TESTING' },
+  { id: 'contractTesting', label: 'Contract Testing', icon: '🧪' },
+  { id: 'bridgeMonitor', label: 'Bridge Monitor', icon: '⇄' },
+  { id: 'qaSystem', label: 'AI QA System', icon: '⚛' },
+
   { type: 'header', label: 'EXPLORE' },
   { id: 'dex', label: 'DEX', icon: '⇌' },
   { id: 'pathExplorer', label: 'Path Explorer', icon: '⇢' },

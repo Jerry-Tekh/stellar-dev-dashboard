@@ -114,6 +114,7 @@ const TABS: Record<string, TabComponent> = {
   systemHealth: lazyTab(() => import('./components/dashboard/SystemHealth')),
   networkIntelligence: lazyTab(() => import('./components/network-intelligence/NetworkIntelligenceDashboard')),
   marketSentiment: lazyTab(() => import('./components/market-sentiment/MarketSentimentDashboard')),
+  docAnalysis: lazyTab(() => import('./components/doc-analysis/DocAnalysisDashboard')),
   performance: lazyTab(() => import('./components/dashboard/PerformanceMonitor')),
   settings: lazyTab(() => import('./components/dashboard/Settings')),
   audit: lazyTab(() => import('./components/dashboard/AuditLog')),
@@ -125,6 +126,7 @@ const TABS: Record<string, TabComponent> = {
   dataExport: lazyTab(() => import('./components/dashboard/DataExport')),
   bridgeMonitor: lazyTab(() => import('./components/dashboard/BridgeMonitor')),
   qaSystem: lazyTab(() => import('./components/dashboard/QASystem')),
+  contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
 }
 
 function TabLoadingFallback() {

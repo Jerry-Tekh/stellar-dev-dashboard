@@ -82,3 +82,20 @@ services:
       - SENTIMENT_API_KEY=${SENTIMENT_API_KEY:-}
     restart: unless-stopped
     profiles: [sentiment]
+
+  contract-testing:
+    build:
+      context: .
+      dockerfile: services/contract-testing/Dockerfile
+    ports:
+      - "8793:8793"
+    environment:
+      - CONTRACT_TESTING_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
+      - CONTRACT_TESTING_API_KEY=${CONTRACT_TESTING_API_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8793/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    profiles: [testing]
