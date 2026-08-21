@@ -124,6 +124,7 @@ const TABS: Record<string, TabComponent> = {
   dataExport: lazyTab(() => import('./components/dashboard/DataExport')),
   bridgeMonitor: lazyTab(() => import('./components/dashboard/BridgeMonitor')),
   qaSystem: lazyTab(() => import('./components/dashboard/QASystem')),
+  contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
 }
 
 function TabLoadingFallback() {
@@ -399,7 +400,7 @@ function DashboardLayout() {
             <PriceTicker />
           </div>
           <ErrorBoundary onRetry={handleRetry} maxRetries={2}>
-            {!connectedAddress && activeTab !== 'outbox' ? (
+            {!connectedAddress && activeTab !== 'outbox' && activeTab !== 'contractTesting' ? (
               <ConnectPanel />
             ) : (
               <Suspense fallback={<TabLoadingFallback />}>
@@ -651,7 +652,7 @@ function RouterSync() {
 
   // ── 4. Redirect guard: no address → /connect, has address → away from /connect ──
   useEffect(() => {
-    if (!connectedAddress && pathTab !== 'connect') {
+    if (!connectedAddress && pathTab !== 'connect' && pathTab !== 'contractTesting') {
       navigate('/connect', { replace: true })
     } else if (connectedAddress && pathTab === 'connect') {
       const params = new URLSearchParams(searchParams)
