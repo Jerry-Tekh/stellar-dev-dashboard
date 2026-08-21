@@ -84,6 +84,12 @@ jobs:
       - name: Test sentiment analysis service
         run: npm run test:sentiment-service
 
+      - name: Test contract testing service
+        run: npm run test:contract-testing-service
+
+      - name: Test recommendation service
+        run: npm run test:recommendation-service
+
       - name: Upload coverage report
         if: matrix.node-version == '20'
         uses: codecov/codecov-action@v7
