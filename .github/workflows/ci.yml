@@ -90,6 +90,9 @@ jobs:
       - name: Test recommendation service
         run: npm run test:recommendation-service
 
+      - name: Test fraud detection service
+        run: npm run test:fraud-service
+
       - name: Upload coverage report
         if: matrix.node-version == '20'
         uses: codecov/codecov-action@v7

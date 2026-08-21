@@ -179,3 +179,7 @@ The dashboard includes a credibility-weighted Stellar sentiment workspace at `/m
 # Contract Testing & Verification
 
 The dashboard includes a Soroban contract testing workspace at `/contractTesting`: paste or upload contract source and get a generated test suite (unit/property-based/fuzz/regression), heuristic static security findings, coverage and mutation-score estimates, a formal-verification report, and a downloadable CI/CD workflow — backed by a deterministic client-side engine plus an optional REST analysis service. This is pattern-based static analysis, not symbolic execution or a theorem prover; see [the methodology, limitations, and deployment guide](docs/contract-testing.md).
+
+# Fraud Detection & Prevention
+
+The dashboard includes a layered fraud workspace at `/fraudDetection`: explainable risk scores, threat-intelligence import, investigation queue, prevention workflows, user education, and an optional REST assessment service for wallet providers. See [the architecture and operations guide](docs/fraud-detection.md).
