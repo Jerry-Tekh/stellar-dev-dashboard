@@ -83,6 +83,18 @@ services:
     restart: unless-stopped
     profiles: [sentiment]
 
+  fraud-detection:
+    build:
+      context: .
+      dockerfile: services/fraud-detection/Dockerfile
+    ports:
+      - "8791:8791"
+    environment:
+      - FRAUD_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
+      - FRAUD_API_KEY=${FRAUD_API_KEY:-}
+    restart: unless-stopped
+    profiles: [fraud]
+
   contract-testing:
     build:
       context: .

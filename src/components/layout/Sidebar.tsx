@@ -67,6 +67,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'charts', label: 'Charts', icon: '▤' },
   { id: 'analytics', label: 'Analytics', icon: '◍' },
   { id: 'behaviorInsights', label: 'Personalization', icon: '◌' },
+  { id: 'fraudDetection', label: 'Fraud Detection', icon: '🛡' },
   { id: 'systemHealth', label: 'Health', icon: '⚕' },
   { id: 'dataExport', label: 'Export', icon: '⬇' },
   { id: 'settings', label: 'Settings', icon: '⚙' },

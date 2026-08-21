@@ -126,6 +126,7 @@ const TABS: Record<string, TabComponent> = {
   bridgeMonitor: lazyTab(() => import('./components/dashboard/BridgeMonitor')),
   qaSystem: lazyTab(() => import('./components/dashboard/QASystem')),
   contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
+  fraudDetection: lazyTab(() => import('./components/fraud/FraudDetectionDashboard')),
 }
 
 function TabLoadingFallback() {
