@@ -173,3 +173,7 @@ MIT
 # Market Sentiment Intelligence
 
 The dashboard includes a credibility-weighted Stellar sentiment workspace at `/marketSentiment`, with source/language/aspect breakdowns, trend and price correlation, viral signals, alerts, and an optional REST ingestion service. See [the methodology and deployment guide](docs/market-sentiment.md).
+
+# Contract Testing & Verification
+
+The dashboard includes a Soroban contract testing workspace at `/contractTesting`: paste or upload contract source and get a generated test suite (unit/property-based/fuzz/regression), heuristic static security findings, coverage and mutation-score estimates, a formal-verification report, and a downloadable CI/CD workflow — backed by a deterministic client-side engine plus an optional REST analysis service. This is pattern-based static analysis, not symbolic execution or a theorem prover; see [the methodology, limitations, and deployment guide](docs/contract-testing.md).
