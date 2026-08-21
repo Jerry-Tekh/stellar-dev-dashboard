@@ -2,6 +2,8 @@
 
 Privacy-preserving usage insights and on-device personalization are documented in [docs/behavior-analytics.md](docs/behavior-analytics.md).
 
+Explainable hybrid ecosystem recommendations, privacy controls, and the optional ranking API are documented in [docs/recommendations.md](docs/recommendations.md).
+
 A real-time, open-source developer dashboard for the Stellar network — built with Vite and React.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)

@@ -11,7 +11,7 @@ export default function PriceTicker() {
     setPricesLoading(true);
     try {
       const xlmPrice = await fetchXLMPrice({ forceRefresh });
-      setPrices({ ...prices, XLM: xlmPrice });
+      setPrices({ ...useStore.getState().prices, XLM: xlmPrice });
       setLastUpdated(new Date());
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -19,7 +19,7 @@ export default function PriceTicker() {
     } finally {
       setPricesLoading(false);
     }
-  }, [prices, setPrices, setPricesLoading, setPricesError]);
+  }, [setPrices, setPricesLoading, setPricesError]);
 
   useEffect(() => {
     loadPrice();
