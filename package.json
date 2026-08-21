@@ -33,6 +33,7 @@
     "test:network-monitor": "node --test services/network-monitor/server.test.mjs",
     "test:sentiment-service": "node --test services/sentiment-analysis/server.test.mjs",
     "test:fraud-service": "node --test services/fraud-detection/server.test.mjs",
+    "test:recommendation-service": "node --test services/recommendation-engine/server.test.mjs",
     "test:contract-testing-service": "node --test services/contract-testing/server.test.mjs",
     "load:test:analytics": "k6 run services/behavior-analytics/load/k6.js",
     "storybook": "storybook dev -p 6006",
@@ -40,6 +41,7 @@
     "monitor:service": "node services/network-monitor/server.mjs",
     "sentiment:service": "node services/sentiment-analysis/server.mjs",
     "fraud:service": "node services/fraud-detection/server.mjs",
+    "recommendation:service": "node services/recommendation-engine/server.mjs",
     "contract-testing:service": "node services/contract-testing/server.mjs"
   },
   "dependencies": {
