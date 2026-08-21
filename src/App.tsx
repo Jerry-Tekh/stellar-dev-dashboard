@@ -110,6 +110,7 @@ const TABS: Record<string, TabComponent> = {
   multisig: lazyNamedTab(() => import('./components/multisig'), 'MultisigManager'),
   analytics: lazyTab(() => import('./components/dashboard/Analytics')),
   behaviorInsights: lazyTab(() => import('./components/analytics/BehaviorAnalyticsDashboard')),
+  recommendations: lazyTab(() => import('./components/recommendations/RecommendationDashboard')),
   systemHealth: lazyTab(() => import('./components/dashboard/SystemHealth')),
   networkIntelligence: lazyTab(() => import('./components/network-intelligence/NetworkIntelligenceDashboard')),
   marketSentiment: lazyTab(() => import('./components/market-sentiment/MarketSentimentDashboard')),
@@ -128,6 +129,8 @@ const TABS: Record<string, TabComponent> = {
   contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
   fraudDetection: lazyTab(() => import('./components/fraud/FraudDetectionDashboard')),
 }
+
+const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting']
 
 function TabLoadingFallback() {
   return (
@@ -402,7 +405,7 @@ function DashboardLayout() {
             <PriceTicker />
           </div>
           <ErrorBoundary onRetry={handleRetry} maxRetries={2}>
-            {!connectedAddress && activeTab !== 'outbox' && activeTab !== 'contractTesting' ? (
+            {!connectedAddress && !PUBLIC_TABS.includes(activeTab) ? (
               <ConnectPanel />
             ) : (
               <Suspense fallback={<TabLoadingFallback />}>
@@ -643,7 +646,7 @@ function RouterSync() {
   //    Skip if the path already matches, or if it maps to a different known tab
   //    (meaning the user navigated via the sidebar — let effect 2 own that).
   useEffect(() => {
-    if (!connectedAddress) return
+    if (!connectedAddress && !PUBLIC_TABS.includes(activeTab)) return
     if (!TABS[activeTab]) return
     const expectedPath = `/${activeTab}`
     if (location.pathname !== expectedPath && !TABS[pathTab]) {
@@ -654,7 +657,7 @@ function RouterSync() {
 
   // ── 4. Redirect guard: no address → /connect, has address → away from /connect ──
   useEffect(() => {
-    if (!connectedAddress && pathTab !== 'connect' && pathTab !== 'contractTesting') {
+    if (!connectedAddress && pathTab !== 'connect' && !PUBLIC_TABS.includes(pathTab)) {
       navigate('/connect', { replace: true })
     } else if (connectedAddress && pathTab === 'connect') {
       const params = new URLSearchParams(searchParams)
