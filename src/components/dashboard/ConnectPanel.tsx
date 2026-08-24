@@ -1,17 +1,12 @@
 import React, { useState, useRef, type CSSProperties, type KeyboardEvent } from 'react'
 import { announceToScreenReader } from '../../utils/accessibility'
 import { useStore } from '../../lib/store'
-import {
-  isValidPublicKey,
-  fetchAccount,
-  fetchTransactions,
-  fetchOperations,
-  resolveAddress,
-} from '../../lib/stellar'
-import { stellarCacheManager } from '../../lib/cacheManager'
-import { getOnlineStatus } from '../../utils/offline'
+import { isValidPublicKey, resolveAddress } from '../../lib/stellar'
 import { useResponsive } from '../../hooks/useResponsive'
 import { ResponsiveGrid } from '../layout/ResponsiveContainer'
+import { useQueryClient } from '@tanstack/react-query'
+import { accountKeys, transactionKeys, operationKeys } from '../../lib/queryKeys'
+import { fetchAccountWithFallback } from '../../hooks/stellar/useAccount'
 
 interface FeatureTile {
   icon: string
@@ -34,23 +29,16 @@ interface AddressInfo {
 export default function ConnectPanel() {
   const [input, setInput] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [isConnecting, setIsConnecting] = useState<boolean>(false)
   const [addressInfo, setAddressInfo] = useState<AddressInfo | null>(null)
   const { isMobile, isTablet } = useResponsive()
   const abortRef = useRef<AbortController | null>(null)
+  const queryClient = useQueryClient()
   const {
     network,
     setConnectedAddress,
     setAccountData,
-    setAccountLoading,
-    setTransactions,
-    setTxLoading,
-    setOperations,
-    setOpsLoading,
     setActiveTab,
-    setTxNextCursor,
-    setTxHasMore,
-    setOpsNextCursor,
-    setOpsHasMore,
   } = useStore()
 
   async function handleConnect(): Promise<void> {
@@ -61,113 +49,73 @@ export default function ConnectPanel() {
       return
     }
 
-    // Cancel any in-flight connect so its callbacks never write stale state
+    // Cancel any prior in-flight connect
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
     const { signal } = controller
 
     setError('')
-    setAccountLoading(true)
+    setIsConnecting(true)
 
     try {
-      // Resolve the address (handles G, M, and federated formats)
+      // 1. Resolve federated / muxed addresses to a canonical G… key
       const resolved = await resolveAddress(addr, network)
       if (signal.aborted) return
 
       if (!resolved) {
         setError('Failed to resolve address')
         setAddressInfo(null)
-        setAccountLoading(false)
         return
       }
 
-      // Store the resolved address info
       setAddressInfo({
         masterAccount: resolved.accountId,
         muxedId: resolved.muxedId,
         federated: resolved.federatedAddress,
       })
 
-      // Fetch account data for the master account
-      let account
-      const online = getOnlineStatus()
+      // 2. Fetch account (offline-aware, writes through to IDB)
+      const result = await fetchAccountWithFallback(resolved.accountId, network, false, signal)
+      if (signal.aborted) return
 
-      if (!online) {
-        // Offline — try to serve from cache
-        const cached = await stellarCacheManager.getWithFallback(
-          `account:${resolved.accountId}:${network}`,
-        )
-        if (signal.aborted) return
-        if (cached.value) {
-          account = cached.value
-        } else {
-          setError('You are offline and no cached data is available for this account.')
-          setAddressInfo(null)
-          setAccountLoading(false)
-          return
-        }
-      } else {
-        account = await fetchAccount(resolved.accountId, network, signal)
-        if (signal.aborted) return
-      }
-
+      // 3. Update Zustand UI state
       setConnectedAddress(resolved.accountId)
-      setAccountData(account)
+      setAccountData(result.account as Parameters<typeof setAccountData>[0])
       setActiveTab('overview')
-
-      // Persist account data for offline reads (TTL 5 min)
-      if (online) {
-        stellarCacheManager
-          .set(`account:${resolved.accountId}:${network}`, account, 300_000, ['account'])
-          .catch(() => {})
-      }
       announceToScreenReader('Connected to account ' + resolved.accountId.slice(0, 8) + '...')
 
-      if (!online) return  // skip background fetches when offline
+      // 4. Seed the React Query cache so Overview renders instantly
+      queryClient.setQueryData(
+        accountKeys.detail(resolved.accountId, network),
+        result,
+      )
 
-      setTxLoading(true)
-      setOpsLoading(true)
+      // 5. Prefetch transactions + operations in the background
+      queryClient.prefetchInfiniteQuery({
+        queryKey: transactionKeys.infinite(resolved.accountId, network, 50),
+        queryFn: ({ signal: s }) =>
+          import('../../lib/stellar').then(({ fetchTransactions }) =>
+            fetchTransactions(resolved.accountId, network, 50, null, s),
+          ),
+        initialPageParam: null,
+      }).catch(() => {})
 
-      fetchTransactions(resolved.accountId, network, 50, null, signal)
-        .then(({ records, nextCursor, hasMore }) => {
-          if (signal.aborted) return
-          setTransactions(records)
-          setTxNextCursor(nextCursor)
-          setTxHasMore(hasMore)
-        })
-        .catch(() => {
-          if (signal.aborted) return
-          setTransactions([])
-          setTxNextCursor(null)
-          setTxHasMore(false)
-        })
-        .finally(() => {
-          if (!signal.aborted) setTxLoading(false)
-        })
+      queryClient.prefetchInfiniteQuery({
+        queryKey: operationKeys.infinite(resolved.accountId, network, 50),
+        queryFn: ({ signal: s }) =>
+          import('../../lib/stellar').then(({ fetchOperations }) =>
+            fetchOperations(resolved.accountId, network, 50, null, s),
+          ),
+        initialPageParam: null,
+      }).catch(() => {})
 
-      fetchOperations(resolved.accountId, network, 50, null, signal)
-        .then(({ records, nextCursor, hasMore }) => {
-          if (signal.aborted) return
-          setOperations(records)
-          setOpsNextCursor(nextCursor)
-          setOpsHasMore(hasMore)
-        })
-        .catch(() => {
-          if (signal.aborted) return
-          setOperations([])
-          setOpsNextCursor(null)
-          setOpsHasMore(false)
-        })
-        .finally(() => {
-          if (!signal.aborted) setOpsLoading(false)
-        })
     } catch (err) {
       if (signal.aborted) return
       setError((err as Error)?.message || 'Account not found on ' + network)
       setAddressInfo(null)
     } finally {
-      if (!signal.aborted) setAccountLoading(false)
+      if (!signal.aborted) setIsConnecting(false)
     }
   }
 
@@ -290,15 +238,21 @@ export default function ConnectPanel() {
           />
           <button
             onClick={() => void handleConnect()}
-            style={buttonStyles}
+            disabled={isConnecting}
+            aria-busy={isConnecting}
+            style={{
+              ...buttonStyles,
+              opacity: isConnecting ? 0.7 : 1,
+              cursor: isConnecting ? 'not-allowed' : 'pointer',
+            }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--cyan-dim)'
+              if (!isConnecting) e.currentTarget.style.background = 'var(--cyan-dim)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--cyan)'
+              if (!isConnecting) e.currentTarget.style.background = 'var(--cyan)'
             }}
           >
-            CONNECT →
+            {isConnecting ? 'CONNECTING…' : 'CONNECT →'}
           </button>
         </div>
         {error && (

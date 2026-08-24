@@ -60,6 +60,9 @@ import TransactionOutbox, {
   TransactionOutboxBadge,
 } from './components/dashboard/TransactionOutbox'
 import { initializeTransactionOutbox } from './lib/transactionOutbox'
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { queryClient } from './lib/queryClient'
 
 interface SearchResult {
   type?: string
@@ -523,6 +526,7 @@ function RouterSync() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  const queryClient = useQueryClient()
   const {
     connectedAddress,
     activeTab,
@@ -531,16 +535,6 @@ function RouterSync() {
     setNetwork,
     setConnectedAddress,
     setAccountData,
-    setAccountLoading,
-    setAccountError,
-    setTransactions,
-    setTxLoading,
-    setTxNextCursor,
-    setTxHasMore,
-    setOperations,
-    setOpsLoading,
-    setOpsNextCursor,
-    setOpsHasMore,
   } = useStore()
 
   const pathTab = location.pathname === '/' ? 'overview' : location.pathname.slice(1)
@@ -554,11 +548,8 @@ function RouterSync() {
     const urlAddress = searchParams.get('address')
     const urlNetwork = searchParams.get('network') as StoreState['network'] | null
 
-    // Set network first so the account fetch uses the right horizon endpoint
     if (urlNetwork && ['mainnet', 'testnet', 'futurenet', 'local', 'custom'].includes(urlNetwork)) {
-      if (urlNetwork !== network) {
-        setNetwork(urlNetwork)
-      }
+      if (urlNetwork !== network) setNetwork(urlNetwork)
     }
 
     if (urlAddress && isValidPublicKey(urlAddress) && !connectedAddress) {
@@ -568,67 +559,43 @@ function RouterSync() {
           : network
       ) as StoreState['network']
 
-      setAccountLoading(true)
       const controller = new AbortController()
       const { signal } = controller
 
-      resolveAddress(urlAddress, targetNetwork)
-        .then(async (resolved) => {
-          if (signal.aborted || !resolved) return
-          let account
-          const online = getOnlineStatus()
-          if (!online) {
-            const cached = await stellarCacheManager.getWithFallback(
-              `account:${resolved.accountId}:${targetNetwork}`,
-            )
-            if (signal.aborted) return
-            if (!cached.value) {
-              setAccountError('You are offline and no cached data is available.')
-              return
-            }
-            account = cached.value
-          } else {
-            account = await fetchAccount(resolved.accountId, targetNetwork, signal)
-          }
-          if (signal.aborted) return
-          setConnectedAddress(resolved.accountId)
-          setAccountData(account as Parameters<typeof setAccountData>[0])
-          // Navigate to the tab that was in the URL path (not always 'overview')
-          if (TABS[pathTab]) {
-            setActiveTab(pathTab)
-          }
-          if (online) {
-            stellarCacheManager
-              .set(`account:${resolved.accountId}:${targetNetwork}`, account, 300_000, ['account'])
-              .catch(() => {})
+      import('./hooks/stellar/useAccount').then(({ fetchAccountWithFallback }) =>
+        fetchAccountWithFallback(urlAddress, targetNetwork, true, signal)
+      )
+        .then((result) => {
+          if (signal.aborted || !result) return
+          setConnectedAddress(result.resolvedAddress!)
+          setAccountData(result.account as Parameters<typeof setAccountData>[0])
+          // Seed query cache so the first tab renders instantly
+          queryClient.setQueryData(
+            ['account', result.resolvedAddress!, targetNetwork],
+            result,
+          )
+          if (TABS[pathTab]) setActiveTab(pathTab)
 
-            const abortFetch = new AbortController()
-            setTxLoading(true)
-            setOpsLoading(true)
-            fetchTransactions(resolved.accountId, targetNetwork, 50, null, abortFetch.signal)
-              .then(({ records, nextCursor, hasMore }) => {
-                setTransactions(records)
-                setTxNextCursor(nextCursor)
-                setTxHasMore(hasMore)
-              })
-              .catch(() => { setTransactions([]); setTxNextCursor(null); setTxHasMore(false) })
-              .finally(() => setTxLoading(false))
-            fetchOperations(resolved.accountId, targetNetwork, 50, null, abortFetch.signal)
-              .then(({ records, nextCursor, hasMore }) => {
-                setOperations(records)
-                setOpsNextCursor(nextCursor)
-                setOpsHasMore(hasMore)
-              })
-              .catch(() => { setOperations([]); setOpsNextCursor(null); setOpsHasMore(false) })
-              .finally(() => setOpsLoading(false))
-          }
+          // Background prefetch transactions + operations
+          const addr = result.resolvedAddress!
+          queryClient.prefetchInfiniteQuery({
+            queryKey: ['transactions', addr, targetNetwork, 'infinite', 50],
+            queryFn: ({ signal: s }) =>
+              import('./lib/stellar').then(({ fetchTransactions }) =>
+                fetchTransactions(addr, targetNetwork, 50, null, s),
+              ),
+            initialPageParam: null,
+          }).catch(() => {})
+          queryClient.prefetchInfiniteQuery({
+            queryKey: ['operations', addr, targetNetwork, 'infinite', 50],
+            queryFn: ({ signal: s }) =>
+              import('./lib/stellar').then(({ fetchOperations }) =>
+                fetchOperations(addr, targetNetwork, 50, null, s),
+              ),
+            initialPageParam: null,
+          }).catch(() => {})
         })
-        .catch((err) => {
-          if (!signal.aborted) setAccountError((err as Error)?.message || 'Account not found')
-        })
-        .finally(() => {
-          if (!signal.aborted) setAccountLoading(false)
-        })
+        .catch(() => { /* URL had an invalid/unfunded address — stay on connect screen */ })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -691,14 +658,19 @@ function RouterSync() {
 
 export default function App() {
   return (
-    <I18nProvider>
-      <AccessibilityProvider>
-        <RouterSync />
-        <Routes>
-          <Route path="/connect" element={<DashboardLayout />} />
-          <Route path="/*" element={<DashboardLayout />} />
-        </Routes>
-      </AccessibilityProvider>
-    </I18nProvider>
+    <QueryClientProvider client={queryClient}>
+      <I18nProvider>
+        <AccessibilityProvider>
+          <RouterSync />
+          <Routes>
+            <Route path="/connect" element={<DashboardLayout />} />
+            <Route path="/*" element={<DashboardLayout />} />
+          </Routes>
+        </AccessibilityProvider>
+      </I18nProvider>
+      {import.meta.env.DEV && (
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+      )}
+    </QueryClientProvider>
   )
 }

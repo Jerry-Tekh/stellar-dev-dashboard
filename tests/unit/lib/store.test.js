@@ -43,13 +43,17 @@ describe('useStore', () => {
 
   // ─── Network ───────────────────────────────────────────────────────────────
 
-  it('setNetwork clears account and transaction state', () => {
-    useStore.setState({ transactions: [{ id: '1' }], accountData: { id: 'G...' } }, false);
+  it('setNetwork clears account state (transactions are owned by React Query)', () => {
+    // React Query manages transaction/operation state keyed by [entity, address, network].
+    // setNetwork only needs to clear the account data so the UI returns to ConnectPanel;
+    // the query cache entries for the old network become stale automatically via their keys.
+    useStore.setState({ accountData: { id: 'G...' } }, false);
     useStore.getState().setNetwork('mainnet');
     const state = useStore.getState();
     expect(state.network).toBe('mainnet');
-    expect(state.transactions).toHaveLength(0);
     expect(state.accountData).toBeNull();
+    // transactions array is a deprecated stub — always stays empty
+    expect(state.transactions).toHaveLength(0);
   });
 
   // ─── Account ───────────────────────────────────────────────────────────────
@@ -67,10 +71,13 @@ describe('useStore', () => {
 
   // ─── Transactions ──────────────────────────────────────────────────────────
 
-  it('appendTransactions deduplicates by id', () => {
+  it('appendTransactions is a no-op stub (React Query owns transaction lists)', () => {
+    // setTransactions and appendTransactions are kept for backward compatibility
+    // but are stubs since React Query (useInfiniteTransactions) owns this data.
     useStore.getState().setTransactions([{ id: 'tx1' }, { id: 'tx2' }]);
     useStore.getState().appendTransactions([{ id: 'tx2' }, { id: 'tx3' }]);
-    expect(useStore.getState().transactions).toHaveLength(3);
+    // The stub does not mutate the store — transactions stays empty
+    expect(useStore.getState().transactions).toHaveLength(0);
   });
 
   // ─── Active tab ────────────────────────────────────────────────────────────

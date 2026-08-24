@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useStore } from '../../lib/store'
-import { fetchNetworkStats, getServer, streamLedgers } from '../../lib/stellar'
+import { getServer, streamLedgers } from '../../lib/stellar'
 import { format } from 'date-fns'
 import Card, { StatCard } from './Card'
 import {
@@ -17,9 +17,17 @@ import {
   calculatePerformanceMetrics,
   LEDGER_OPERATION_LIMIT
 } from '../../lib/networkMonitoring'
+import { useNetworkStats } from '../../hooks/stellar'
 
 export default function Network() {
-  const { network, networkStats, setNetworkStats, statsLoading, setStatsLoading } = useStore()
+  const { network } = useStore()
+
+  // React Query replaces manual statsLoading + setNetworkStats + setStatsLoading
+  const {
+    data: networkStats,
+    isLoading: statsLoading,
+  } = useNetworkStats(network, { refetchInterval: 30_000 })
+
   const [recentLedgers, setRecentLedgers] = useState([])
   const [ledgersLoading, setLedgersLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -76,21 +84,14 @@ export default function Network() {
   }, [chartData])
 
   useEffect(() => {
-    setStatsLoading(true)
     setLedgersLoading(true)
-
-    // Initial fetch
-    fetchNetworkStats(network)
-      .then(s => setNetworkStats(s))
-      .catch(() => { })
-      .finally(() => setStatsLoading(false))
 
     getServer(network).ledgers().order('desc').limit(20).call()
       .then(r => setRecentLedgers(r.records))
       .catch(() => { })
       .finally(() => setLedgersLoading(false))
 
-    // Set up streaming
+    // Set up streaming — the periodic stats poll is handled by useNetworkStats
     let closeStream = null
     try {
       closeStream = streamLedgers((newLedger) => {
@@ -99,17 +100,6 @@ export default function Network() {
           if (prev.some(l => l.sequence === newLedger.sequence)) return prev
           return [newLedger, ...prev.slice(0, 19)]
         })
-
-        // Update latest ledger immediately for instant UI feedback
-        setNetworkStats(prev => ({
-          ...prev,
-          latestLedger: newLedger
-        }))
-
-        // Refresh full stats to ensure fee stats and other data stay current
-        fetchNetworkStats(network)
-          .then(s => setNetworkStats(s))
-          .catch(() => { })
       }, network)
     } catch (e) {
       console.error('Streaming failed:', e)
