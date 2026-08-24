@@ -73,43 +73,81 @@ export interface StoreState {
   isMobileMenuOpen: boolean
   setMobileMenuOpen: (open: boolean) => void
   connectedAddress: string | null
+  /** Account response kept for components not yet on React Query. */
   accountData: Horizon.AccountResponse | null
+  /** @deprecated — use useAccount() from hooks/stellar instead */
   accountLoading: boolean
+  /** @deprecated — use useAccount() from hooks/stellar instead */
   accountError: string | null
   setConnectedAddress: (address: string | null) => void
   setAccountData: (data: Horizon.AccountResponse) => void
+  /** @deprecated — no-op; React Query owns loading state */
   setAccountLoading: (loading: boolean) => void
+  /** @deprecated — no-op; React Query owns error state */
   setAccountError: (error: string | null) => void
+
+  // ── Transaction server-state — owned by React Query (useInfiniteTransactions) ──
+  /** @deprecated — read from useInfiniteTransactions() */
   transactions: Horizon.ServerApi.TransactionRecord[]
+  /** @deprecated — read from useInfiniteTransactions().isLoading */
   txLoading: boolean
+  /** @deprecated — no-op */
   setTransactions: (txs: Horizon.ServerApi.TransactionRecord[]) => void
+  /** @deprecated — no-op */
   appendTransactions: (txs: Horizon.ServerApi.TransactionRecord[]) => void
+  /** @deprecated — no-op */
   setTxLoading: (v: boolean) => void
+  /** @deprecated — owned by React Query cursor */
   txNextCursor: string | null
+  /** @deprecated — use useInfiniteTransactions().hasNextPage */
   txHasMore: boolean
+  /** @deprecated — use useInfiniteTransactions().isFetchingNextPage */
   txPagingLoading: boolean
   txScrollPosition: number
+  /** @deprecated — no-op */
   setTxNextCursor: (cursor: string | null) => void
+  /** @deprecated — no-op */
   setTxHasMore: (hasMore: boolean) => void
+  /** @deprecated — no-op */
   setTxPagingLoading: (v: boolean) => void
   setTxScrollPosition: (pos: number) => void
+
+  // ── Operation server-state — owned by React Query (useInfiniteOperations) ──
+  /** @deprecated — read from useInfiniteOperations() */
   operations: Horizon.ServerApi.OperationRecord[]
+  /** @deprecated — use useInfiniteOperations().isLoading */
   opsLoading: boolean
+  /** @deprecated — no-op */
   setOperations: (ops: Horizon.ServerApi.OperationRecord[]) => void
+  /** @deprecated — no-op */
   appendOperations: (ops: Horizon.ServerApi.OperationRecord[]) => void
+  /** @deprecated — no-op */
   setOpsLoading: (v: boolean) => void
+  /** @deprecated — owned by React Query cursor */
   opsNextCursor: string | null
+  /** @deprecated — use useInfiniteOperations().hasNextPage */
   opsHasMore: boolean
+  /** @deprecated — use useInfiniteOperations().isFetchingNextPage */
   opsPagingLoading: boolean
   opsScrollPosition: number
+  /** @deprecated — no-op */
   setOpsNextCursor: (cursor: string | null) => void
+  /** @deprecated — no-op */
   setOpsHasMore: (hasMore: boolean) => void
+  /** @deprecated — no-op */
   setOpsPagingLoading: (v: boolean) => void
   setOpsScrollPosition: (pos: number) => void
+
+  // ── Network stats — owned by React Query (useNetworkStats) ───────────────
+  /** @deprecated — use useNetworkStats() */
   networkStats: NetworkStats | null
+  /** @deprecated — use useNetworkStats().isLoading */
   statsLoading: boolean
+  /** @deprecated — no-op; kept for backward compat */
   setNetworkStats: (stats: NetworkStats | ((prev: NetworkStats | null) => NetworkStats)) => void
+  /** @deprecated — no-op */
   setStatsLoading: (v: boolean) => void
+
   activeTab: string
   setActiveTab: (tab: string) => void
   faucetLoading: boolean
@@ -136,12 +174,21 @@ export interface StoreState {
   setPreferencesOpen: (open: boolean) => void
   globalError: { message: string; category: string } | null
   setGlobalError: (err: { message: string; category: string } | null) => void
+
+  // ── Price data — owned by React Query (useXLMPrice) ──────────────────────
+  /** @deprecated — use useXLMPrice() */
   prices: Record<string, { usd: number | null; usd_24h_change: number | null }>
+  /** @deprecated — use useXLMPrice().isLoading */
   pricesLoading: boolean
+  /** @deprecated — use useXLMPrice().isError */
   pricesError: string | null
+  /** @deprecated — no-op */
   setPrices: (prices: Record<string, { usd: number | null; usd_24h_change: number | null }>) => void
+  /** @deprecated — no-op */
   setPricesLoading: (loading: boolean) => void
+  /** @deprecated — no-op */
   setPricesError: (error: string | null) => void
+
   searchFilters: SearchFilters
   setSearchFilters: (filters: Partial<SearchFilters>) => void
   comparisonSlots: ComparisonSlot[]
@@ -211,15 +258,9 @@ export const useStore = create<StoreState>((set, get) => ({
     set({
       network,
       accountData: null,
-      transactions: [],
-      operations: [],
-      txNextCursor: null,
-      txHasMore: false,
-      txPagingLoading: false,
+      // React Query caches keyed by [entity, address, network] are automatically
+      // stale once network changes — no need to clear them manually.
       txScrollPosition: 0,
-      opsNextCursor: null,
-      opsHasMore: false,
-      opsPagingLoading: false,
       opsScrollPosition: 0,
     })
   },
@@ -244,52 +285,43 @@ export const useStore = create<StoreState>((set, get) => ({
   accountError: null,
   setConnectedAddress: (address) => set({ connectedAddress: address }),
   setAccountData: (data) => set({ accountData: data, accountError: null }),
-  setAccountLoading: (loading) => set({ accountLoading: loading }),
-  setAccountError: (error) => set({ accountError: error }),
+  // Stubs — React Query owns loading/error state; kept for backward compat
+  setAccountLoading: (_loading) => {},
+  setAccountError: (_error) => {},
 
   transactions: [],
   txLoading: false,
-  setTransactions: (txs) => set({ transactions: txs }),
-  appendTransactions: (txs) => set((state) => {
-    const existing = new Set(state.transactions.map(tx => tx.id))
-    const merged = [...state.transactions, ...txs.filter(tx => !existing.has(tx.id))]
-    return { transactions: merged }
-  }),
-  setTxLoading: (v) => set({ txLoading: v }),
+  setTransactions: (_txs) => {},
+  appendTransactions: (_txs) => {},
+  setTxLoading: (_v) => {},
   txNextCursor: null,
   txHasMore: false,
   txPagingLoading: false,
   txScrollPosition: 0,
-  setTxNextCursor: (cursor) => set({ txNextCursor: cursor }),
-  setTxHasMore: (hasMore) => set({ txHasMore: hasMore }),
-  setTxPagingLoading: (v) => set({ txPagingLoading: v }),
+  setTxNextCursor: (_cursor) => {},
+  setTxHasMore: (_hasMore) => {},
+  setTxPagingLoading: (_v) => {},
   setTxScrollPosition: (pos) => set({ txScrollPosition: pos }),
 
   operations: [],
   opsLoading: false,
-  setOperations: (ops) => set({ operations: ops }),
-  appendOperations: (ops) => set((state) => {
-    const existing = new Set(state.operations.map(op => op.id))
-    const merged = [...state.operations, ...ops.filter(op => !existing.has(op.id))]
-    return { operations: merged }
-  }),
-  setOpsLoading: (v) => set({ opsLoading: v }),
+  setOperations: (_ops) => {},
+  appendOperations: (_ops) => {},
+  setOpsLoading: (_v) => {},
   opsNextCursor: null,
   opsHasMore: false,
   opsPagingLoading: false,
   opsScrollPosition: 0,
-  setOpsNextCursor: (cursor) => set({ opsNextCursor: cursor }),
-  setOpsHasMore: (hasMore) => set({ opsHasMore: hasMore }),
-  setOpsPagingLoading: (v) => set({ opsPagingLoading: v }),
+  setOpsNextCursor: (_cursor) => {},
+  setOpsHasMore: (_hasMore) => {},
+  setOpsPagingLoading: (_v) => {},
   setOpsScrollPosition: (pos) => set({ opsScrollPosition: pos }),
 
   networkStats: null,
   statsLoading: false,
-  setNetworkStats: (stats) => set((state) => ({
-    networkStats: typeof stats === 'function' ? stats(state.networkStats) : stats,
-    statsLoading: false
-  })),
-  setStatsLoading: (v) => set({ statsLoading: v }),
+  // Stub — React Query owns stats; kept for backward compat
+  setNetworkStats: (_stats) => {},
+  setStatsLoading: (_v) => {},
 
   activeTab: 'overview',
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -326,9 +358,10 @@ export const useStore = create<StoreState>((set, get) => ({
   prices: {},
   pricesLoading: false,
   pricesError: null,
-  setPrices: (prices) => set({ prices, pricesError: null }),
-  setPricesLoading: (loading) => set({ pricesLoading: loading }),
-  setPricesError: (error) => set({ pricesError: error }),
+  // Stubs — React Query owns price state via useXLMPrice()
+  setPrices: (_prices) => {},
+  setPricesLoading: (_loading) => {},
+  setPricesError: (_error) => {},
 
   searchFilters: DEFAULT_SEARCH_FILTERS,
   setSearchFilters: (filters) => set((state) => ({

@@ -3,7 +3,7 @@ import { Download, Filter, Search, X } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Horizon } from '@stellar/stellar-sdk'
 import { useStore } from '../../lib/store'
-import { shortAddress, getOperationLabel, fetchTransactions, fetchOperations } from '../../lib/stellar'
+import { shortAddress, getOperationLabel } from '../../lib/stellar'
 import CopyableValue from './CopyableValue'
 import SearchFilters from '../search/SearchFilters'
 import useSearch from '../../hooks/useSearch'
@@ -11,6 +11,12 @@ import { usePreferences } from '../../hooks/usePreferences'
 import { applyTransactionFilters, applyOperationFilters } from '../../lib/filters'
 import { exportCsv, flattenTransaction } from '../../utils/export'
 import { VirtualTxList, VirtualOpList, TX_ROW_HEIGHT, OP_ROW_HEIGHT } from './VirtualizedLists'
+import {
+  useInfiniteTransactions,
+  useInfiniteOperations,
+  flattenTransactionPages,
+  flattenOperationPages,
+} from '../../hooks/stellar'
 
 const VIRTUAL_SCROLL_THRESHOLD = 200
 const PAGE_SIZE = 100
@@ -92,29 +98,11 @@ function flattenOperation(op: Horizon.ServerApi.OperationRecord) {
 export default function Transactions() {
   const {
     connectedAddress,
-    transactions,
-    txLoading,
-    appendTransactions,
-    txNextCursor,
-    txHasMore,
-    txPagingLoading,
-    txScrollPosition,
-    setTxNextCursor,
-    setTxHasMore,
-    setTxPagingLoading,
-    setTxScrollPosition,
-    operations,
-    opsLoading,
-    appendOperations,
-    opsNextCursor,
-    opsHasMore,
-    opsPagingLoading,
-    opsScrollPosition,
-    setOpsNextCursor,
-    setOpsHasMore,
-    setOpsPagingLoading,
-    setOpsScrollPosition,
     network,
+    txScrollPosition,
+    setTxScrollPosition,
+    opsScrollPosition,
+    setOpsScrollPosition,
   } = useStore()
 
   const [view, setView] = useState('transactions')
@@ -132,16 +120,33 @@ export default function Transactions() {
   } = useSearch()
   const { preferences } = usePreferences()
 
+  // ── React Query data ──────────────────────────────────────────────────────
+  const {
+    data: txData,
+    isLoading: txLoading,
+    isFetchingNextPage: txPagingLoading,
+    hasNextPage: txHasMore,
+    fetchNextPage: fetchMoreTransactions,
+  } = useInfiniteTransactions(connectedAddress ?? '', network, PAGE_SIZE, !!connectedAddress)
+
+  const {
+    data: opsData,
+    isLoading: opsLoading,
+    isFetchingNextPage: opsPagingLoading,
+    hasNextPage: opsHasMore,
+    fetchNextPage: fetchMoreOperations,
+  } = useInfiniteOperations(connectedAddress ?? '', network, PAGE_SIZE, !!connectedAddress)
+
+  // Flatten infinite pages into flat arrays
+  const transactions = useMemo(() => flattenTransactionPages(txData), [txData])
+  const operations = useMemo(() => flattenOperationPages(opsData), [opsData])
+
   const addressLabels = useMemo(() => {
     return (preferences.savedAddresses || []).reduce((labels, entry) => {
       labels[entry.address] = entry.label
       return labels
     }, {})
   }, [preferences.savedAddresses])
-
-  // Track in-flight requests to prevent duplicate calls
-  const txLoadingRef = React.useRef(false)
-  const opsLoadingRef = React.useRef(false)
 
   const filteredTransactions = useMemo(() => {
     let list = transactions
@@ -188,41 +193,16 @@ export default function Transactions() {
 
   const visibleRows = view === 'transactions' ? filteredTransactions : filteredOperations
 
-  // Debounced load-more — guards against rapid duplicate calls from
-  // both IntersectionObserver and scroll handlers firing together
+  // Load-more callbacks — delegate to React Query, which deduplicates concurrent calls
   const handleLoadMoreTransactions = React.useCallback(async () => {
-    if (!connectedAddress || !txHasMore || !txNextCursor || txPagingLoading || txLoadingRef.current) return
-    txLoadingRef.current = true
-    setTxPagingLoading(true)
-    try {
-      const { records, nextCursor, hasMore } = await fetchTransactions(
-        connectedAddress, network, PAGE_SIZE, txNextCursor
-      )
-      appendTransactions(records)
-      setTxNextCursor(nextCursor)
-      setTxHasMore(hasMore)
-    } finally {
-      setTxPagingLoading(false)
-      txLoadingRef.current = false
-    }
-  }, [connectedAddress, txHasMore, txNextCursor, txPagingLoading, network, appendTransactions, setTxNextCursor, setTxHasMore, setTxPagingLoading])
+    if (!txHasMore || txPagingLoading) return
+    await fetchMoreTransactions()
+  }, [txHasMore, txPagingLoading, fetchMoreTransactions])
 
   const handleLoadMoreOperations = React.useCallback(async () => {
-    if (!connectedAddress || !opsHasMore || !opsNextCursor || opsPagingLoading || opsLoadingRef.current) return
-    opsLoadingRef.current = true
-    setOpsPagingLoading(true)
-    try {
-      const { records, nextCursor, hasMore } = await fetchOperations(
-        connectedAddress, network, PAGE_SIZE, opsNextCursor
-      )
-      appendOperations(records)
-      setOpsNextCursor(nextCursor)
-      setOpsHasMore(hasMore)
-    } finally {
-      setOpsPagingLoading(false)
-      opsLoadingRef.current = false
-    }
-  }, [connectedAddress, opsHasMore, opsNextCursor, opsPagingLoading, network, appendOperations, setOpsNextCursor, setOpsHasMore, setOpsPagingLoading])
+    if (!opsHasMore || opsPagingLoading) return
+    await fetchMoreOperations()
+  }, [opsHasMore, opsPagingLoading, fetchMoreOperations])
 
 
   function handleExportCsv() {

@@ -55,22 +55,23 @@ describe('useStore — wallet / account', () => {
     expect(s.accountError).toBeNull();
   });
 
-  it('setAccountLoading toggles the loading flag', () => {
+  it('setAccountLoading is a no-op stub (React Query owns loading state)', () => {
+    // accountLoading is kept in the interface for backward compat but
+    // useAccount() from hooks/stellar is the authoritative source.
     useStore.getState().setAccountLoading(true);
-    expect(useStore.getState().accountLoading).toBe(true);
-    useStore.getState().setAccountLoading(false);
-    expect(useStore.getState().accountLoading).toBe(false);
+    expect(useStore.getState().accountLoading).toBe(false); // stub, never mutates
   });
 });
 
 describe('useStore — network switching', () => {
   beforeEach(resetStore);
 
-  it('setNetwork updates the network and clears account/tx caches', () => {
+  it('setNetwork updates the network and clears accountData (tx/ops owned by React Query)', () => {
+    // React Query caches transactions/operations keyed by [entity, address, network].
+    // Switching network makes those keys stale automatically — no manual clearing needed.
+    // The store only clears accountData so the UI returns to ConnectPanel.
     useStore.setState({
       accountData: { id: 'X' } as never,
-      transactions: [{ id: 't1' } as never],
-      operations: [{ id: 'o1' } as never],
     });
 
     useStore.getState().setNetwork('mainnet');
@@ -78,31 +79,30 @@ describe('useStore — network switching', () => {
     const s = useStore.getState();
     expect(s.network).toBe('mainnet');
     expect(s.accountData).toBeNull();
+    // transactions/operations are stub arrays — always empty
     expect(s.transactions).toHaveLength(0);
     expect(s.operations).toHaveLength(0);
   });
 });
 
-describe('useStore — transactions/operations append (deduped)', () => {
+describe('useStore — transactions/operations (React Query stubs)', () => {
   beforeEach(resetStore);
 
-  it('setTransactions replaces the list', () => {
+  it('setTransactions is a no-op stub (React Query owns transaction lists)', () => {
+    // useInfiniteTransactions() is the authoritative source for transaction data.
+    // setTransactions/appendTransactions are kept for interface compat only.
     useStore.getState().setTransactions([{ id: 'a' } as never, { id: 'b' } as never]);
-    expect(useStore.getState().transactions).toHaveLength(2);
+    expect(useStore.getState().transactions).toHaveLength(0);
   });
 
-  it('appendTransactions deduplicates by id', () => {
-    useStore.getState().setTransactions([{ id: 'a' } as never]);
+  it('appendTransactions is a no-op stub (React Query owns transaction lists)', () => {
     useStore.getState().appendTransactions([{ id: 'a' } as never, { id: 'b' } as never]);
-    const ids = useStore.getState().transactions.map((t: { id: string }) => t.id);
-    expect(ids).toEqual(['a', 'b']);
+    expect(useStore.getState().transactions).toHaveLength(0);
   });
 
-  it('appendOperations deduplicates by id', () => {
-    useStore.getState().setOperations([{ id: 'op1' } as never]);
+  it('appendOperations is a no-op stub (React Query owns operation lists)', () => {
     useStore.getState().appendOperations([{ id: 'op1' } as never, { id: 'op2' } as never]);
-    const ids = useStore.getState().operations.map((o: { id: string }) => o.id);
-    expect(ids).toEqual(['op1', 'op2']);
+    expect(useStore.getState().operations).toHaveLength(0);
   });
 });
 
