@@ -1,10 +1,9 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import ChunkLoadErrorBoundary from '../components/ChunkLoadErrorBoundary';
 
 const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 const ThrowChunkLoadError = ({ shouldThrow }: { shouldThrow: boolean }) => {
@@ -27,21 +26,6 @@ const ThrowNetworkError = ({ shouldThrow }: { shouldThrow: boolean }) => {
   }
   return <div data-testid="child-content">Child Content</div>;
 };
-
-const ThrowChunkLoadErrorNamed = ({ shouldThrow }: { shouldThrow: boolean }) => {
-  if (shouldThrow) {
-    const err = new Error('ChunkLoadError: Loading chunk 123 failed');
-    err.name = 'ChunkLoadError';
-    throw err;
-  }
-  return <div data-testid="child-content">Child Content</div>;
-};
-
-// Helper to trigger error boundary state update
-function triggerErrorBoundary(error: Error) {
-  // We test the banner component directly for UI behavior
-  // The class component's getDerivedStateFromError is tested via integration
-}
 
 describe('ChunkLoadErrorBoundary', () => {
   beforeEach(() => {
@@ -133,19 +117,11 @@ describe('ChunkLoadErrorBoundary', () => {
 
   describe('ChunkLoadErrorBanner UI', () => {
     it('renders banner with correct message for first occurrence', () => {
-      const onReload = vi.fn();
-      const onDismiss = vi.fn();
-      
-      // Render the banner directly by accessing the internal component
-      // We test the banner logic through the class component's render
-      const { rerender } = render(
+      render(
         <ChunkLoadErrorBoundary>
           <ThrowChunkLoadError shouldThrow={false} />
         </ChunkLoadErrorBoundary>
       );
-      
-      // Manually set state to trigger banner (simulating error caught)
-      // This tests the banner rendering logic
     });
 
     it('shows "Update Required" message when retryCount > 0', () => {
@@ -159,7 +135,7 @@ describe('ChunkLoadErrorBoundary', () => {
       const onReload = vi.fn();
       const boundary = new ChunkLoadErrorBoundary({ onReload, children: null });
       boundary.setState({ hasChunkLoadError: true, error: new Error('test'), retryCount: 0, isReloading: false });
-      boundary.handleReload();
+      (boundary as any).handleReload();
       expect(onReload).toHaveBeenCalledTimes(1);
     });
 
@@ -170,12 +146,12 @@ describe('ChunkLoadErrorBoundary', () => {
       
       // Temporarily replace window.location.reload
       const originalLocation = global.window.location;
-      global.window.location = { ...originalLocation, reload: mockReload };
+      global.window.location = { ...originalLocation, reload: mockReload } as any;
       
-      boundary.handleReload();
+      (boundary as any).handleReload();
       
       expect(mockReload).toHaveBeenCalledTimes(1);
-      global.window.location = originalLocation;
+      global.window.location = originalLocation as any;
     });
 
     it('handles missing window.location gracefully', () => {
@@ -186,7 +162,7 @@ describe('ChunkLoadErrorBoundary', () => {
       const boundary = new ChunkLoadErrorBoundary({ children: null });
       boundary.setState({ hasChunkLoadError: true, error: new Error('test'), retryCount: 0, isReloading: false });
       
-      expect(() => boundary.handleReload()).not.toThrow();
+      expect(() => (boundary as any).handleReload()).not.toThrow();
       
       global.window = originalWindow;
     });
@@ -195,7 +171,7 @@ describe('ChunkLoadErrorBoundary', () => {
       const boundary = new ChunkLoadErrorBoundary({ children: null });
       boundary.setState({ hasChunkLoadError: true, error: new Error('test'), retryCount: 0, isReloading: false });
       
-      boundary.handleDismiss();
+      (boundary as any).handleDismiss();
       expect(boundary.state.hasChunkLoadError).toBe(false);
       expect(boundary.state.retryCount).toBe(0);
       
@@ -208,20 +184,16 @@ describe('ChunkLoadErrorBoundary', () => {
 
   describe('ChunkLoadErrorBanner component', () => {
     it('renders banner with correct elements', () => {
-      const { container } = render(
+      render(
         <ChunkLoadErrorBoundary>
           <ThrowChunkLoadError shouldThrow={false} />
         </ChunkLoadErrorBoundary>
       );
-      
-      // The banner is only shown when hasChunkLoadError is true
-      // We can't easily test the banner in isolation without triggering the error boundary
-      // This is an integration test that would require react-error-boundary testing utilities
     });
   });
 
   it('renders custom fallback when provided', () => {
-    const CustomFallback = ({ error, onReload, onDismiss, retryCount, isReloading }: any) => (
+    const CustomFallback = ({ error, onReload, onDismiss, retryCount: _retryCount, isReloading: _isReloading }: any) => (
       <div data-testid="custom-fallback">
         <span>Custom: {error?.message}</span>
         <button onClick={onReload}>Custom Reload</button>
@@ -271,19 +243,70 @@ describe('ChunkLoadErrorBoundary integration', () => {
     
     // Test handleDismiss logic
     boundary.setState({ hasChunkLoadError: true, error, retryCount: 0, isReloading: false });
-    boundary.handleDismiss();
+    (boundary as any).handleDismiss();
     // handleDismiss calls setState, but we can't easily test the async result
     // Just verify the method exists and doesn't throw
-    expect(typeof boundary.handleDismiss).toBe('function');
+    expect(typeof (boundary as any).handleDismiss).toBe('function');
   });
 
   it('sets isReloading during handleReload', () => {
     const boundary = new ChunkLoadErrorBoundary({ children: null });
     boundary.setState({ hasChunkLoadError: true, error: new Error('test'), retryCount: 0, isReloading: false });
-    
+
     // handleReload calls setState({ isReloading: true })
     // Just verify it doesn't throw and the method exists
-    expect(() => boundary.handleReload()).not.toThrow();
-    expect(typeof boundary.handleReload).toBe('function');
+    expect(() => (boundary as any).handleReload()).not.toThrow();
+    expect(typeof (boundary as any).handleReload).toBe('function');
+  });
+
+  it('propagates a generic (non-chunk-load) error instead of showing the recovery banner', () => {
+    expect(() =>
+      render(
+        <ChunkLoadErrorBoundary>
+          <ThrowGenericError shouldThrow={true} />
+        </ChunkLoadErrorBoundary>
+      )
+    ).toThrow('Some random runtime error');
+
+    expect(screen.queryByText('New Version Available')).not.toBeInTheDocument();
+  });
+
+  it('shows the recovery banner for a NetworkError-flavored chunk-load failure', () => {
+    // Capture the real Error ThrowNetworkError produces, the same one a
+    // failed dynamic import would surface.
+    let networkError: Error | undefined;
+    try {
+      ThrowNetworkError({ shouldThrow: true });
+    } catch (e) {
+      networkError = e as Error;
+    }
+    expect(networkError?.message).toBe('NetworkError when attempting to fetch dynamic import');
+
+    let instance: ChunkLoadErrorBoundary | null = null;
+    render(
+      <ChunkLoadErrorBoundary
+        ref={(el) => {
+          instance = el;
+        }}
+      >
+        <ThrowNetworkError shouldThrow={false} />
+      </ChunkLoadErrorBoundary>
+    );
+
+    // Drive the boundary through the exact transition React performs when a
+    // child throws during render: call its own getDerivedStateFromError and
+    // apply the result.
+    act(() => {
+      instance!.setState(ChunkLoadErrorBoundary.getDerivedStateFromError(networkError!));
+    });
+
+    expect(screen.getByText('New Version Available')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'A new version of the dashboard has been deployed. The page needs to be refreshed to load the latest changes.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload page to get latest version' })).toBeInTheDocument();
+    expect(screen.getByTestId('child-content')).toBeInTheDocument();
   });
 });
