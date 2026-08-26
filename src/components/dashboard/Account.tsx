@@ -9,6 +9,7 @@ import {
   fetchAccountOffers,
   calculateAccountReserves,
 } from '../../lib/stellar';
+import { accountRequests, AccountLanes, isCancellation } from '../../lib/requestCancellation';
 import CopyableValue from './CopyableValue';
 import useAssetUsdEstimates, { formatEstimatedUsd } from '../../hooks/useAssetUsdEstimates';
 import AddressLabelBadge from '../addressLabels/AddressLabelBadge';
@@ -93,6 +94,9 @@ export default function Account() {
 
   useEffect(() => {
     if (!connectedAddress) {
+      // No account selected: cancel anything still loading for the previous one.
+      accountRequests.abort(AccountLanes.Offers);
+      accountRequests.abort(AccountLanes.CreationDate);
       setOffers([]);
       setOffersLoading(false);
       setOffersError(null);
@@ -101,39 +105,43 @@ export default function Account() {
       return;
     }
 
-    let isActive = true;
+    // Starting these lanes cancels the reads for the previously selected account
+    // or network, so their slower responses can no longer land here (Issue #745).
+    const creationLease = accountRequests.begin(AccountLanes.CreationDate);
+    const offersLease = accountRequests.begin(AccountLanes.Offers);
 
     setOffersLoading(true);
     setOffersError(null);
     setCreatedAtLoading(true);
     setCreatedAt(null);
 
-    fetchAccountCreationDate(connectedAddress, network)
-      .then((date: Date) => {
-        if (!isActive) return;
-        setCreatedAt(date);
+    fetchAccountCreationDate(connectedAddress, network, { signal: creationLease.signal })
+      .then((date) => {
+        creationLease.commit(() => setCreatedAt(date ? new Date(date) : null));
+      })
+      .catch((err) => {
+        if (isCancellation(err)) return;
+        creationLease.commit(() => setCreatedAt(null));
       })
       .finally(() => {
-        if (!isActive) return;
-        setCreatedAtLoading(false);
+        creationLease.commit(() => setCreatedAtLoading(false));
       });
 
-    fetchAccountOffers(connectedAddress, network)
-      .then((res: AccountOffer[]) => {
-        if (!isActive) return;
-        setOffers(res);
+    fetchAccountOffers(connectedAddress, network, { signal: offersLease.signal })
+      .then((res) => {
+        offersLease.commit(() => setOffers(res as AccountOffer[]));
       })
       .catch((err: Error) => {
-        if (!isActive) return;
-        setOffersError(err.message);
+        if (isCancellation(err)) return;
+        offersLease.commit(() => setOffersError(err.message));
       })
       .finally(() => {
-        if (!isActive) return;
-        setOffersLoading(false);
+        offersLease.commit(() => setOffersLoading(false));
       });
 
     return () => {
-      isActive = false;
+      creationLease.abort();
+      offersLease.abort();
     };
   }, [connectedAddress, network]);
 

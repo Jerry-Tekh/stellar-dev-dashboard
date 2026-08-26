@@ -4,6 +4,7 @@ import { syncState, onStateChange } from '../utils/stateSync'
 import type { NetworkName, NetworkStats } from './stellar'
 import type { Horizon, SorobanRpc } from '@stellar/stellar-sdk'
 import { generateInsights, type AnalyticsSummary } from './analytics'
+import { accountRequests } from './requestCancellation'
 import { applyCustomThemeToDOM, removeCustomThemeFromDOM, saveThemeVarsToStorage, clearThemeVarsFromStorage, type ThemeDefinition } from '../styles/themeTypes'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -296,6 +297,11 @@ export const useStore = create<StoreState>((set) => ({
   setNetwork: (network) => {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem(SELECTED_NETWORK_KEY, network) } catch { /* ignore */ }
 
+    // Cancel Horizon reads issued against the network we are leaving. Without this
+    // a slower response could repopulate the state this switch is about to clear,
+    // showing the previous network's account data under the new network (#745).
+    accountRequests.abortAll()
+
     // Stash current network data before switching
     const stash = (prev: StoreState) => {
       const current = prev.network
@@ -317,6 +323,12 @@ export const useStore = create<StoreState>((set) => ({
       const updatedData = stash(state)
       const cached = updatedData[network]
       const clear = {
+        // These reads were just aborted above, so nothing is loading any more.
+        // Their own `finally` handlers are lease-guarded and will no longer fire,
+        // which would otherwise leave a spinner stuck on after a network switch.
+        accountLoading: false,
+        txLoading: false,
+        opsLoading: false,
         networkStats: null,
         statsLoading: false,
         streamLedgers: [],
