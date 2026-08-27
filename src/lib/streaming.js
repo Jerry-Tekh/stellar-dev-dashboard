@@ -121,9 +121,14 @@ class StreamManager {
     if (online) {
       // Reset reconnect attempts and cancel pending timer so reconnection
       // starts from base delay immediately.
+      const wasPausedOffline = this._status === 'reconnecting'
       this._reconnectAttempts = 0
       this._cancelReconnect()
-      this._setStatus('connecting')
+      if (wasPausedOffline) {
+        // We were paused waiting for connectivity — reopen the stream now
+        // instead of leaving the manager stuck reporting 'connecting'.
+        this._openStream()
+      }
     } else {
       // Pause: cancel any pending reconnect timer without incrementing attempts.
       this._cancelReconnect()
