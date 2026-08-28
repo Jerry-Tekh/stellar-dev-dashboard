@@ -27,7 +27,8 @@ export function createLocaleFormatter(inputLocale: string): LocaleFormatter {
       return new Intl.NumberFormat(locale).format(total) + 's';
     },
     list(values, options = { style: 'long' as const, type: 'conjunction' as const }) {
-      const ListFormat = (Intl as typeof Intl & { ListFormat?: new (locale: string, options: typeof options) => { format(values: string[]): string } }).ListFormat;
+      type ListFormatOptions = { style?: 'long' | 'short' | 'narrow'; type?: 'conjunction' | 'disjunction' | 'unit' };
+      const ListFormat = (Intl as typeof Intl & { ListFormat?: new (locale: string, options: ListFormatOptions) => { format(values: string[]): string } }).ListFormat;
       return ListFormat ? safe(() => new ListFormat(locale, options).format(values), values.join(', ')) : values.join(', ');
     },
     relativeTime(value, unit) { return safe(() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(value, unit), `${value} ${unit}`); },
