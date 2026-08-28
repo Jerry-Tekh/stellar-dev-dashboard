@@ -191,3 +191,7 @@ The dashboard includes a layered fraud workspace at `/fraudDetection`: explainab
 # Treasury Reconciliation & Accounting Exports
 
 The dashboard includes a treasury reconciliation workspace at `/treasuryReconciliation`: deterministic period reconciliation of payments, path payments, trades, fees, claimable balances, sponsorship changes, Soroban token transfers, and account changes into traceable ledger postings, with configurable category rules, cost-basis inputs, discrepancy detection, immutable period snapshots, and versioned CSV/JSON accounting exports. These are operational records, not tax or accounting advice, and are independent of the AI portfolio optimizer. See [the architecture, data model, and export format guide](docs/treasury-reconciliation.md).
+
+# Protocol & Soroban RPC Compatibility
+
+The dashboard includes an evidence-driven compatibility workspace at `/compatibility`: a versioned protocol/SDK/XDR/RPC matrix, bounded network probes, hard and degraded feature gates, endpoint comparison, upgrade-readiness audits, change history, expiring maintainer overrides, and redacted versioned exports. Unknown future protocols are gated until reviewed. See [the architecture, security, migration, and operations guide](docs/compatibility.md).
