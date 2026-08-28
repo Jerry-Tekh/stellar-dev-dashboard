@@ -63,6 +63,7 @@ import { initializeTransactionOutbox } from './lib/transactionOutbox'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './lib/queryClient'
+import { diagnosticCollector } from './lib/diagnostics'
 
 interface SearchResult {
   type?: string
@@ -132,9 +133,10 @@ const TABS: Record<string, TabComponent> = {
   contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
   fraudDetection: lazyTab(() => import('./components/fraud/FraudDetectionDashboard')),
   treasuryReconciliation: lazyTab(() => import('./components/treasury/TreasuryReconciliationDashboard')),
+  diagnostics: lazyTab(() => import('./components/diagnostics/DiagnosticsDashboard')),
 }
 
-const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting', 'resourceProfiling']
+const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting', 'resourceProfiling', 'diagnostics']
 
 function TabLoadingFallback() {
   return (
@@ -281,6 +283,11 @@ function DashboardLayout() {
 
   useEffect(() => {
     addBreadcrumb(`Mapsd to ${activeTab} tab`, 'navigation', { activeTab })
+    diagnosticCollector.addBreadcrumb({
+      action: 'dashboard.navigation',
+      feature: activeTab,
+      detail: { destination: activeTab },
+    })
     trackSecurityEvent(SecurityEventType.CONFIG_CHANGED, {
       target: 'activeTab',
       metadata: { activeTab },
