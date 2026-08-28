@@ -134,7 +134,7 @@ const TABS: Record<string, TabComponent> = {
   treasuryReconciliation: lazyTab(() => import('./components/treasury/TreasuryReconciliationDashboard')),
 }
 
-const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting']
+const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting', 'resourceProfiling']
 
 function TabLoadingFallback() {
   return (
