@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
 
   { type: 'header', label: 'NETWORK' },
   { id: 'network', label: 'Network Info', icon: '◎' },
+  { id: 'compatibility', label: 'Compatibility', icon: '✓' },
   { id: 'networkIntelligence', label: 'Intelligence', icon: '◈' },
   { id: 'marketSentiment', label: 'Sentiment', icon: '◔' },
   { id: 'docAnalysis', label: 'Doc Analysis', icon: '❖' },
@@ -74,6 +75,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'systemHealth', label: 'Health', icon: '⚕' },
   { id: 'diagnostics', label: 'Diagnostics', icon: '◇' },
   { id: 'dataExport', label: 'Export', icon: '⬇' },
+  { id: 'translationReview', label: 'Translations', icon: '文' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
   { id: 'audit', label: 'Audit', icon: '⊟' },
 ];

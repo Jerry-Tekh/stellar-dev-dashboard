@@ -14,6 +14,7 @@
     "format": "prettier --write package.json package-lock.json eslint.config.js tsconfig.json .github/workflows/ci.yml .prettierrc.json",
     "format:check": "prettier --check package.json package-lock.json eslint.config.js tsconfig.json .github/workflows/ci.yml .prettierrc.json",
     "type-check": "tsc --noEmit",
+    "validate:i18n": "node scripts/validate-i18n.mjs",
     "test": "vitest run --config vitest.config.js",
     "test:watch": "vitest --config vitest.config.js",
     "test:ui": "vitest --ui --config vitest.config.js",

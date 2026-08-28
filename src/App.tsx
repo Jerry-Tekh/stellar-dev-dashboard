@@ -117,6 +117,7 @@ const TABS: Record<string, TabComponent> = {
   recommendations: lazyTab(() => import('./components/recommendations/RecommendationDashboard')),
   systemHealth: lazyTab(() => import('./components/dashboard/SystemHealth')),
   networkIntelligence: lazyTab(() => import('./components/network-intelligence/NetworkIntelligenceDashboard')),
+  compatibility: lazyTab(() => import('./components/compatibility/CompatibilityDashboard')),
   marketSentiment: lazyTab(() => import('./components/market-sentiment/MarketSentimentDashboard')),
   docAnalysis: lazyTab(() => import('./components/doc-analysis/DocAnalysisDashboard')),
   performance: lazyTab(() => import('./components/dashboard/PerformanceMonitor')),
