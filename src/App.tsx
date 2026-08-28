@@ -131,7 +131,7 @@ const TABS: Record<string, TabComponent> = {
   qaSystem: lazyTab(() => import('./components/dashboard/QASystem')),
   contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
   fraudDetection: lazyTab(() => import('./components/fraud/FraudDetectionDashboard')),
-  resourceProfiling: lazyTab(() => import('./components/resource-profiling/ResourceProfilingDashboard')),
+  translationReview: lazyTab(() => import('./components/i18n/TranslationReview')),
 }
 
 const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting', 'resourceProfiling']
