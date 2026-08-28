@@ -74,6 +74,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'treasuryReconciliation', label: 'Treasury Reconciliation', icon: '📒' },
   { id: 'systemHealth', label: 'Health', icon: '⚕' },
   { id: 'dataExport', label: 'Export', icon: '⬇' },
+  { id: 'translationReview', label: 'Translations', icon: '文' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
   { id: 'audit', label: 'Audit', icon: '⊟' },
 ];
