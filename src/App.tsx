@@ -134,7 +134,7 @@ const TABS: Record<string, TabComponent> = {
   translationReview: lazyTab(() => import('./components/i18n/TranslationReview')),
 }
 
-const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting']
+const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting', 'resourceProfiling']
 
 function TabLoadingFallback() {
   return (
