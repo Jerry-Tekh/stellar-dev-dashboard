@@ -131,9 +131,10 @@ const TABS: Record<string, TabComponent> = {
   qaSystem: lazyTab(() => import('./components/dashboard/QASystem')),
   contractTesting: lazyTab(() => import('./components/contract-testing/ContractTestingDashboard')),
   fraudDetection: lazyTab(() => import('./components/fraud/FraudDetectionDashboard')),
+  resourceProfiling: lazyTab(() => import('./components/resource-profiling/ResourceProfilingDashboard')),
 }
 
-const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting']
+const PUBLIC_TABS = ['outbox', 'recommendations', 'contractTesting', 'resourceProfiling']
 
 function TabLoadingFallback() {
   return (
