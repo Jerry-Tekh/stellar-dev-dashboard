@@ -37,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "bridgeMonitor", label: "Bridge Monitor", icon: "⇄" },
   { id: "qaSystem", label: "AI QA System", icon: "⚛" },
   { id: "contractTesting", label: "Contract Testing", icon: "🧪" },
+  { id: "diagnostics", label: "Diagnostics", icon: "◇" },
 ];
 
 /**

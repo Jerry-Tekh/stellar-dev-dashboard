@@ -1,97 +1,69 @@
-# Stellar protocol and Soroban RPC compatibility matrix
+# Privacy-safe diagnostic bundles and guided incident troubleshooting
 
 ## Summary
 
-Adds an evidence-driven compatibility workspace at `/compatibility` that correlates the selected Stellar network with the dashboard's installed SDK/XDR range, Soroban RPC surface, retention, limits, saved artifacts, and maintainer decisions. Unknown future protocols, malformed evidence, and expired probes remain gated instead of being treated as compatible.
-
-This is a cohesive feature track spanning typed domain models, deterministic services, state transitions, accessible React workflows, persistence/export contracts, tests, and operational documentation.
+This PR adds a production-grade, public `/diagnostics` incident workspace. It captures bounded evidence through a deterministic redact-before-memory boundary, runs six cancellable non-destructive troubleshooting flows, and creates field-selectable, expiring SHA-256 bundles for explicit local download/import/comparison. Diagnostics adds no telemetry, upload API, automatic sharing, wallet prompt, signature request, transaction submission, worker mutation, or cache deletion.
 
 ## Design decisions
 
-- **Exact reviewed releases, not optimistic ranges:** matrix `2026.08.1` has explicit protocol 20–27 entries. A protocol must match an entry; protocol 28+ is a hard unreviewed state.
-- **Installed SDK is separate from matrix knowledge:** the repo's `@stellar/stellar-sdk` 12.3.0 profile supports protocol/XDR 20–21. Newer matrix entries describe the upgrade required and do not enable the current build.
-- **Direct evidence with expiry:** every feature result includes source, field, observed time, endpoint context, confidence, and five-minute freshness.
-- **Required vs optional RPC:** missing identity, XDR, simulation, or submission support hard-gates affected workflows; missing fee/build/history enrichment produces an actionable degraded mode.
-- **Service boundaries:** probe, assessment, comparison, audit, redaction, persistence, and export are independent TypeScript modules behind typed interfaces. React owns orchestration/presentation only.
-- **Read-only capability probes:** invalid XDR is used to identify simulation/submission method recognition without executing a transaction.
-- **Visible, expiring overrides:** target/feature-scoped decisions require author, reason, and expiry (maximum 30 days), appear in evidence/exports, and never mutate the matrix.
-- **Lazy UI delivery:** compatibility JS/CSS is route-split from the main bundle.
+- **Separate trust boundary:** typed contracts, redaction, collection, environment capture, guided probes, bundle validation, persistence, React state, and presentation have independent modules and injectable interfaces.
+- **Redact first:** built-in protocol/credential/identity patterns and session-only literal rules execute before events enter the ring; bundle construction repeats the boundary and import requires a redaction-contract fixed point.
+- **Bound every input:** event/breadcrumb rings, traversal depth/nodes/strings/collections/bytes, saved count/bytes/expiry, imported bytes/records/nesting, and per-check time are finite.
+- **Causal evidence:** start/completion events share request and correlation IDs; completion references its start and is idempotent.
+- **Read-only guides:** endpoint checks use only Horizon root `GET` and Soroban `getHealth`; wallet checks inspect bridge presence; rendering/worker/cache checks read state; storage uses one temporary key and cleans it in `finally`.
+- **Stable local artifacts:** schema v1 bundles include canonical SHA-256 envelope integrity (all metadata and content except the digest field), exact inclusion controls, counts, size, expiry, strict import validation and meaningful comparison deltas.
+- **Graceful degradation:** unavailable/private/quota-blocked storage becomes bounded memory-only state; optional worker/cache/browser capabilities produce warning/unknown results.
+- **Accessible complete workflow:** loading, empty, success, retryable error, degraded and offline states; keyboard/focus dialog behavior; live regions; responsive/reduced-motion/forced-color/light-theme contrast; axe and visual coverage.
 
-## User experience
+## Threat model
 
-- Complete loading, empty, success, retry/error, degraded, contradictory, and offline states.
-- Status view for protocol, SDK, RPC methods, retention/limits, feature gates, and evidence.
-- Endpoint comparison for passphrase, protocol, ledger lag, retention, and method drift.
-- Upgrade audit for saved envelopes, snapshots, contract artifacts, plugins, custom networks, and cached data.
-- Matrix change history and maintainer override management.
-- Redacted, versioned JSON report export.
-- Desktop/mobile navigation entry; works without a connected account.
-- Keyboard focus, semantic tables, screen-reader status, touch sizing, reduced motion, responsive layouts, and axe coverage.
+Mitigated risks include accidental disclosure of Stellar seeds/accounts/contracts, tokens, signatures, XDR, URLs, local names/IDs, hostile/cyclic/oversized values, malicious imported JSON, private-mode storage denial, silent bundle tampering, and diagnostics telemetry. Import rejects prototype keys, forward/legacy unsupported formats, unsafe values requiring redaction, integrity/count/size mismatch and expiry.
 
-## Threat model and privacy
+Same-origin compromised scripts or privileged extensions can still inspect page memory. Downloads are integrity-protected but are not encrypted or author-attested. Users must review the preview and choose their normal secure support channel.
 
-Protected data includes endpoint identity, request-only custom headers, saved-artifact provenance, and availability of transaction workflows.
+## Compatibility and performance
 
-Controls:
+- Uses existing browser Fetch, AbortController, Web Crypto, Local Storage, Blob and optional Service Worker/CacheStorage APIs.
+- Supports the existing Mainnet/Testnet/Futurenet/Local/Custom profiles without new server infrastructure.
+- The dashboard UI is lazy-loaded; only the small idempotent capture boundary initializes at startup.
+- Normal bounds: 250 events, 100 breadcrumbs, 32 KiB/event, 5 stored bundles, 3 MiB persistence, 2 MiB import, 1–30 day expiry.
+- Network checks are sequential, cancellable and individually limited to 500–4,000 ms.
+- Adds more than 5,000 meaningful production TypeScript/React/CSS lines, excluding tests, docs, snapshots and generated output.
 
-- custom request headers never enter probe results;
-- only allow-listed vendor response headers are retained;
-- URLs lose credentials/query/fragment data;
-- bearer tokens, secret-like fields, and Stellar secret seeds are recursively redacted;
-- cache/export/import formats are size-bounded, versioned, and validated;
-- forward schemas are rejected;
-- every request is cancellable and time-bounded;
-- comparison endpoints do not inherit primary credentials;
-- passphrase/protocol contradictions block failover confidence;
-- cached offline data is explicitly stale/cached evidence;
-- overrides are attributed, bounded, and exported.
+## Observable behavior
 
-The probe never sends a valid executable envelope. Existing transaction, contract, plugin, network-profile, and cache records are not migrated or modified.
-
-## Compatibility and migration
-
-- New local keys: `stellar:compatibility:probe:v1:<target>` and `stellar:compatibility:overrides:v1`.
-- Export/import schema: version 1 with strict kind discriminators.
-- This is the first schema, so no data migration is required.
-- Invalid/obsolete cache records are removed; future versions are rejected conservatively.
-- A future schema bump must add an explicit migration or invalidate the old record.
-- Rollback is isolated: revert the feature commit; optional removal of `stellar:compatibility:*` keys has no effect on other features.
+1. `/diagnostics` works without an account connection.
+2. Status shows capture/redaction/buffer/persistence and already-redacted evidence.
+3. Six incident guides return pass/warning/fail/skipped states and documented non-destructive remediation.
+4. Bundle controls allow section, optional environment field and event-category selection.
+5. Preview exposes counts, omissions, expiry, SHA-256 and transport `none` before download.
+6. Imports are validated and verified; comparisons show category, failure, environment and flow changes.
+7. Clear requires confirmation; Escape preserves evidence.
+8. Offline and storage-denied cases retain usable local evidence.
 
 ## Test evidence
 
-Feature-specific deterministic coverage includes matrix validation, old/current/future protocol behavior, missing/unknown methods, contradictory endpoints, cache expiry, malformed and forward-version documents, overrides, offline mode, timeout/cancellation, redaction, all audit categories, React rendering, WCAG 2.1 AA, E2E workflows, and a visual baseline.
+Targeted checks added:
 
-Final local gate evidence, literal results, and exit statuses are recorded in `verification/compatibility-ci.md`.
+- redaction bypasses, custom literal escaping, huge/cyclic/hostile values;
+- bounded rings, deep snapshot isolation, causal request IDs and pause/resume;
+- inclusion, SHA verification, tamper, expiry, oversized/malformed/future/malicious imports and comparisons;
+- durable persistence, expiry cleanup, private/quota failure and forward storage schema;
+- deterministic read-only endpoint/RPC, storage cleanup, offline/wallet, rendering and cancellation flows;
+- component loading/error/retry/success/dialog/accessibility coverage;
+- six deterministic Chromium workflows including export content, malicious import, offline state and axe;
+- two committed visual baselines for overview and guide catalog.
 
-- [x] `npm ci`
-- [x] `npm run lint` (zero errors; repository baseline warnings remain)
-- [x] `npm run format:check`
-- [x] `npm run type-check`
-- [x] `npm run test:coverage` (112 files / 1,025 tests)
-- [x] all six service-test gates (45 tests)
-- [x] `npm run build`
-- [x] `.github/workflows/ci.yml` Chromium E2E gate via `npm run test:e2e:critical` (21 tests)
-- [x] `npm run test:visual` (17 tests, including the new compatibility baseline)
-- [x] compatibility axe WCAG 2.1 AA workflow
-- [x] `npm audit --audit-level=high` (zero vulnerabilities)
-- [x] bundle-size measurement (66 KiB main entry / 500 KiB budget)
-
-## Performance impact
-
-- Compatibility workflow is lazy-loaded as a separate route chunk.
-- Probes run small requests concurrently in two bounded stages; each has cancellation and an 8-second UI timeout.
-- Successful observations cache for five minutes to avoid repeated probes.
-- Response size is capped at 2 MB; imports at 1 MB/1,000 records; comparisons at five endpoints; overrides at 100.
-- No polling loop or service worker behavior was added.
+Final verification results and exact commands are recorded in `VERIFICATION.md` after the target branch update.
 
 ## Known limitations
 
-- Reported vendor limits remain `unknown` when endpoints do not expose them; the feature does not invent defaults.
-- Retention is derived only when transaction/event responses expose oldest/latest ledger fields.
-- The installed SDK 12.3.0 hard-gates protocol 22+ XDR workflows even though the matrix documents their required SDK lines.
-- Local artifact discovery is intentionally conservative; IndexedDB/build-system inventories should use the versioned import contract.
-- Browser extensions or compromised same-origin code can observe in-memory page state; custom credentials should remain in the existing session-only network mechanism.
+- URL redaction retains protocol and hostname classification for endpoint diagnosis while removing credentials, port, path, query and fragment.
+- SHA-256 detects modification but does not encrypt or establish authorship.
+- Imported older schemas are rejected for regeneration because no pre-v1 integrity contract exists.
+- A tab close discards memory-only evidence unless the user explicitly downloads a reviewed bundle.
+- Optional Service Worker and CacheStorage capability varies by browser and security context.
 
 ## Documentation
 
-See `docs/compatibility.md` for architecture, matrix maintenance, workflows, schemas, security/privacy, accessibility, testing, migration, troubleshooting, and rollback.
+`docs/diagnostics.md` covers architecture, serialized formats, privacy/security boundary, compatibility, user workflows, remediation, migration/forward handling, maintainer integration and tests.

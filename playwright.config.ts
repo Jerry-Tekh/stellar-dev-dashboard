@@ -49,10 +49,26 @@ export default defineConfig({
       },
       testMatch: ['**/visual.spec.*', '**/*.visual.spec.*'],
     },
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'] },
-    { name: 'firefox',  use: { ...devices['Desktop Firefox'] }, testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'] },
-    { name: 'webkit',   use: { ...devices['Desktop Safari'] }, testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'] },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'] },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'],
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+      testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'],
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+      testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'],
+    },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: ['**/visual.spec.*', '**/*.visual.spec.*'],
+    },
   ],
   webServer: {
     command: process.env.PLAYWRIGHT_BASE_URL ? 'npm run preview' : 'npm run dev',
