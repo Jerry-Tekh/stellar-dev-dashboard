@@ -26,7 +26,10 @@ export function createLocaleFormatter(inputLocale: string): LocaleFormatter {
       if (minutes) return new Intl.NumberFormat(locale).format(minutes) + 'm ' + new Intl.NumberFormat(locale).format(total % 60) + 's';
       return new Intl.NumberFormat(locale).format(total) + 's';
     },
-    list(values, options = { style: 'long', type: 'conjunction' }) { return safe(() => new Intl.ListFormat(locale, options).format(values), values.join(', ')); },
+    list(values, options = { style: 'long' as const, type: 'conjunction' as const }) {
+      const ListFormat = (Intl as typeof Intl & { ListFormat?: new (locale: string, options: typeof options) => { format(values: string[]): string } }).ListFormat;
+      return ListFormat ? safe(() => new ListFormat(locale, options).format(values), values.join(', ')) : values.join(', ');
+    },
     relativeTime(value, unit) { return safe(() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(value, unit), `${value} ${unit}`); },
     text(value, direction?: TextDirection) {
       const rtl = direction === 'rtl' || (!direction && /^(ar|he|fa|ur)\b/i.test(locale));

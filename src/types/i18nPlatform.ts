@@ -72,7 +72,7 @@ export interface LocaleFormatter {
   number(value: number | string, options?: Intl.NumberFormatOptions): string;
   date(value: Date | string | number, options?: Intl.DateTimeFormatOptions): string;
   duration(seconds: number): string;
-  list(values: string[], options?: Intl.ListFormatOptions): string;
+  list(values: string[], options?: { style?: 'long' | 'short' | 'narrow'; type?: 'conjunction' | 'disjunction' | 'unit' }): string;
   relativeTime(value: number, unit: Intl.RelativeTimeFormatUnit): string;
   text(value: string, direction?: TextDirection): string;
 }
