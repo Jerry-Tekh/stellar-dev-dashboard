@@ -62,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'wallet', label: 'Wallet', icon: '⊡' },
   { id: 'signer', label: 'Signer', icon: '✎' },
   { id: 'outbox', label: 'Outbox', icon: '⇧' },
+  { id: 'bulkOperations', label: 'Bulk Operations', icon: '⧉' },
   { id: 'multisig', label: 'Multisig', icon: '⊕' },
   { id: 'governance', label: 'Governance', icon: '🏛' },
   { id: 'alertRules', label: 'Alerts', icon: '🔔' },
