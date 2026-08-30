@@ -43,6 +43,11 @@ import DebugAssistantButton from '../components/debug/DebugAssistantButton';
 import DebugAssistantPanel from '../components/debug/DebugAssistantPanel';
 import ConversationPanel from '../components/conversation/ConversationPanel';
 import { useRouteFocus } from '../hooks/useRouteFocus';
+import { useExpertise } from '../context/ExpertiseContext';
+import { useExpertiseTracking } from '../hooks/useExpertiseTracking';
+import ExpertiseBadge from '../components/expertise/ExpertiseBadge';
+import PredictiveFeatureSuggestions from '../components/dashboard/PredictiveFeatureSuggestions';
+import TipButton from '../components/ai/TipButton';
 import { useWalletSessionListeners } from '../hooks/useWalletSessionListeners';
 
 interface SearchResult {
@@ -241,9 +246,10 @@ export default function DashboardLayout() {
     debugAssistantOpen,
     debugAssistantIssueCount,
     toggleDebugAssistant,
-  } = useStore();
+  } = useStore() as any;
   const { isMobile, isTablet } = useResponsive();
   const { level, isNovice, setLevel, updateSignals } = useExpertise();
+  const { trackFeatureInteraction } = useExpertiseTracking({ enabled: true });
   const [notificationsOpen, setNotificationsOpen] = useState<boolean>(false);
   const [conversationOpen, setConversationOpen] = useState<boolean>(false);
   const preferencesTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -269,7 +275,7 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      updateSignals((current) => ({ sessionDurationMinutes: current.sessionDurationMinutes + 1 }));
+      updateSignals((current: any) => ({ sessionDurationMinutes: current.sessionDurationMinutes + 1 }));
     }, 60000);
 
     return () => window.clearInterval(timer);
@@ -480,7 +486,7 @@ export default function DashboardLayout() {
         <TourLauncher />
         <DevToolbar />
         <PredictiveFeatureSuggestions
-          onNavigate={(tab) => navigate(`/${tab}`)}
+          onNavigate={(tab: string) => navigate(`/${tab}`)}
         />
         <NotificationBell
           onClick={() => setNotificationsOpen(true)}
