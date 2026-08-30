@@ -44,6 +44,7 @@ import DebugAssistantPanel from '../components/debug/DebugAssistantPanel';
 import ConversationPanel from '../components/conversation/ConversationPanel';
 import { useRouteFocus } from '../hooks/useRouteFocus';
 import { useStorageQuotaAlerts } from '../hooks/useStorageQuotaAlerts';
+import { useWalletSessionListeners } from '../hooks/useWalletSessionListeners';
 
 interface SearchResult {
   type?: string;
@@ -250,6 +251,7 @@ export default function DashboardLayout() {
 
   useRouteFocus(activeTab);
   useStorageQuotaAlerts();
+  useWalletSessionListeners();
 
   useEffect(() => {
     // v2: full multi-layer cache initialization (warm, prune, SW bridge)
