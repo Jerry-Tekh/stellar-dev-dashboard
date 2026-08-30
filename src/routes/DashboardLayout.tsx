@@ -43,6 +43,7 @@ import DebugAssistantButton from '../components/debug/DebugAssistantButton';
 import DebugAssistantPanel from '../components/debug/DebugAssistantPanel';
 import ConversationPanel from '../components/conversation/ConversationPanel';
 import { useRouteFocus } from '../hooks/useRouteFocus';
+import { useStorageQuotaAlerts } from '../hooks/useStorageQuotaAlerts';
 import { useExpertise } from '../context/ExpertiseContext';
 import { useExpertiseTracking } from '../hooks/useExpertiseTracking';
 import ExpertiseBadge from '../components/expertise/ExpertiseBadge';
@@ -255,6 +256,7 @@ export default function DashboardLayout() {
   const preferencesTriggerRef = React.useRef<HTMLButtonElement>(null);
 
   useRouteFocus(activeTab);
+  useStorageQuotaAlerts();
   useWalletSessionListeners();
 
   useEffect(() => {
