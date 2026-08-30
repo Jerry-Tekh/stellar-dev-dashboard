@@ -48,6 +48,7 @@ import { useExpertiseTracking } from '../hooks/useExpertiseTracking';
 import ExpertiseBadge from '../components/expertise/ExpertiseBadge';
 import PredictiveFeatureSuggestions from '../components/dashboard/PredictiveFeatureSuggestions';
 import TipButton from '../components/ai/TipButton';
+import { useWalletSessionListeners } from '../hooks/useWalletSessionListeners';
 
 interface SearchResult {
   type?: string;
@@ -254,6 +255,7 @@ export default function DashboardLayout() {
   const preferencesTriggerRef = React.useRef<HTMLButtonElement>(null);
 
   useRouteFocus(activeTab);
+  useWalletSessionListeners();
 
   useEffect(() => {
     // v2: full multi-layer cache initialization (warm, prune, SW bridge)
