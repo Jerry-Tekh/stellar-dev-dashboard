@@ -79,6 +79,24 @@ function InfoRow({ label, value, mono = true, accent, copyValue, secondaryValue 
   );
 }
 
+function DataSourceBadge({ dataSource, offline }: { dataSource?: string; offline?: boolean }) {
+  if (!offline && (!dataSource || dataSource === 'live')) return null;
+  return (
+    <span
+      style={{
+        padding: '2px 8px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        background: dataSource === 'cache-stale' ? 'var(--amber-glow)' : 'var(--bg-elevated)',
+        color: dataSource === 'cache-stale' ? 'var(--amber)' : 'var(--text-muted)',
+        border: `1px solid ${dataSource === 'cache-stale' ? 'var(--amber)' : 'var(--border)'}`,
+      }}
+    >
+      {offline ? 'Offline' : dataSource}
+    </span>
+  );
+}
+
 export default function Account() {
   const { accountData, connectedAddress, network, networkStats } = useStore();
   const [offers, setOffers] = useState<AccountOffer[]>([]);
@@ -170,6 +188,9 @@ export default function Account() {
     refreshKey: accountData,
   });
   const xlmEstimate = xlm ? getEstimate(xlm) : null;
+  const offline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
+  const dataSource = 'live';
+  const accountCachedAt: number | null = null;
 
   return (
     <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
