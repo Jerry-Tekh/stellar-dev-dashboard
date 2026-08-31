@@ -5,6 +5,7 @@ import { simulateContractCall, isValidContractId } from "../../lib/stellar";
 import { addContractInteraction } from "../../lib/storage";
 import { generateId } from "../../lib/notifications";
 import ContractHistory from "./ContractHistory";
+import ContractEventDisplay from "./ContractEventDisplay";
 import { useContractRecommendations } from "../../hooks/useContractRecommendations";
 import { useGasPrediction } from "../../hooks/useGasPrediction";
 import { usePreferences } from "../../hooks/usePreferences";
@@ -963,7 +964,7 @@ export default function ContractInteraction() {
             label="Simulation Result"
             data={simulationResult.result}
           />
-          <ResultBlock label="Events" data={simulationResult.events} />
+          <ContractEventDisplay events={simulationResult.events} label="Simulation Events" />
         </div>
       )}
 

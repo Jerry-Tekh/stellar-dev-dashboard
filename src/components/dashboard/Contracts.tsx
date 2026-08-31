@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { useStore } from '../../lib/store'
 import ContractDeployerView from '../deployment/ContractDeployer'
 import ContractRecommendations from './ContractRecommendations'
+import ContractEventDisplay from './ContractEventDisplay'
 import {
   fetchContractInfo,
   invokeContract,
@@ -859,7 +860,7 @@ export default function Contracts() {
               transactionXdr: simulationResult.xdr,
             }}
           />
-          <ResultBlock label="Simulation Events" data={simulationResult.events} />
+          <ContractEventDisplay events={simulationResult.events} label="Simulation Events" />
           <ResultBlock label="Simulation Footprint" data={simulationResult.footprint} />
         </div>
       )}
