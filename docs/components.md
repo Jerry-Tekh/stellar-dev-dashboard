@@ -111,6 +111,26 @@ Soroban smart contract inspector and invoker.
 
 ---
 
+### `<ContractEventDisplay>`
+**File:** `src/components/dashboard/ContractEventDisplay.tsx`
+
+Renders Soroban smart contract events as typed, searchable data with safe raw XDR fallback.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `events` | `ContractEvent[] \| unknown` | `[]` | Array of Soroban contract events or single event object |
+| `label` | `string` | `'Contract Events'` | Title label shown in header |
+| `spec` | `any` | `undefined` | Optional contract spec object for spec-aware topic/parameter matching |
+| `className` | `string` | `undefined` | Container styling class name |
+
+#### Features & Usage Notes
+- **Typed ScVal Decoding**: Converts ScVal base64 XDR payloads into native JS types (`symbol`, `address`, `i128`, `bool`, `vec`, `map`, `string`).
+- **Raw XDR Fallback**: Provides safe fallback rendering for invalid, unparseable, or corrupt XDR inputs with toggleable raw payload viewer and copy actions.
+- **Search & Filtering**: Search across topics, contract IDs, types, and values, or filter by category (`ALL`, `CONTRACT`, `SYSTEM`, `DIAGNOSTIC`, `RAW_XDR`).
+- **Security & Compatibility**: Built with environment feature-detection (checking for `@stellar/stellar-sdk` and `navigator.clipboard`) and safe runtime fallback mechanisms.
+
+---
+
 ### `<DEXExplorer>`
 **File:** `src/components/dashboard/DEXExplorer.jsx`
 
