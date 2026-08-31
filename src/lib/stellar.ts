@@ -481,19 +481,72 @@ export async function probeAllNetworks(): Promise<NetworkProbeResult[]> {
   return Promise.all(probes);
 }
 
+// ─── Cancellation ─────────────────────────────────────────────────────────────
+
+/**
+ * Per-request options accepted by the account-scoped Horizon readers.
+ *
+ * `signal` lets a caller abandon a read when the user switches account or network
+ * (Issue #745). Every reader below is backwards compatible: omit the argument and
+ * behaviour is unchanged.
+ */
+export interface HorizonRequestOptions {
+  signal?: AbortSignal;
+}
+
+/** DOM-compatible abort error, usable where `DOMException` is unavailable. */
+function createAbortError(): Error {
+  if (typeof DOMException === 'function') {
+    return new DOMException('The operation was aborted.', 'AbortError');
+  }
+  const error = new Error('The operation was aborted.');
+  error.name = 'AbortError';
+  return error;
+}
+
+/** Rejects immediately when `signal` is already aborted. */
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw createAbortError();
+}
+
+/**
+ * Rejects as soon as `signal` aborts, even when `promise` cannot itself be
+ * cancelled. The Stellar SDK's `CallBuilder`/`loadAccount` do not accept an
+ * `AbortSignal`, so the underlying HTTP request may still complete — but its result
+ * is detached from the caller and can no longer overwrite current state.
+ */
+function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(createAbortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(createAbortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => {
+      signal.removeEventListener('abort', onAbort);
+    });
+  });
+}
+
 // ─── Account ──────────────────────────────────────────────────────────────────
 
 export async function fetchAccount(
   publicKey: string,
-  network: NetworkName = 'testnet'
+  network: NetworkName = 'testnet',
+  options: HorizonRequestOptions = {}
 ): Promise<StellarSdk.Horizon.AccountResponse> {
+  throwIfAborted(options.signal);
+
   const cacheKey = `account:${publicKey}:${network}`;
   const cached = stellarCache.get(cacheKey);
   if (cached) return cached;
 
   const breaker = getCircuitBreaker(`horizon:${network}`, { failureThreshold: 5, timeout: 30_000 });
   const server = getServer(network);
-  const account = await breaker.execute(() => server.loadAccount(publicKey));
+  const account = await withAbort(
+    breaker.execute(() => server.loadAccount(publicKey)),
+    options.signal
+  );
   stellarCache.set(cacheKey, account, TTL.ACCOUNT, ['account', publicKey]);
   return account;
 }
@@ -504,12 +557,15 @@ export async function fetchTransactions(
   publicKey: string,
   network: NetworkName = 'testnet',
   limit = 20,
-  cursor: string | null = null
+  cursor: string | null = null,
+  options: HorizonRequestOptions = {}
 ): Promise<{
   records: StellarSdk.Horizon.ServerApi.TransactionRecord[];
   nextCursor: string | null;
   hasMore: boolean;
 }> {
+  throwIfAborted(options.signal);
+
   const cacheKey = `transactions:${publicKey}:${network}:${limit}:${cursor || 'null'}`;
   const cached = stellarCache.get(cacheKey);
   if (cached) return cached;
@@ -519,7 +575,7 @@ export async function fetchTransactions(
 
   if (cursor) request.cursor(cursor);
 
-  const txs = await request.call();
+  const txs = await withAbort(request.call(), options.signal);
   const records = txs.records || [];
   const nextCursor = records.length > 0 ? records[records.length - 1].paging_token : null;
 
@@ -536,12 +592,15 @@ export async function fetchOperations(
   publicKey: string,
   network: NetworkName = 'testnet',
   limit = 20,
-  cursor: string | null = null
+  cursor: string | null = null,
+  options: HorizonRequestOptions = {}
 ): Promise<{
   records: StellarSdk.Horizon.ServerApi.OperationRecord[];
   nextCursor: string | null;
   hasMore: boolean;
 }> {
+  throwIfAborted(options.signal);
+
   const cacheKey = `operations:${publicKey}:${network}:${limit}:${cursor || 'null'}`;
   const cached = stellarCache.get(cacheKey);
   if (cached) return cached;
@@ -551,7 +610,7 @@ export async function fetchOperations(
 
   if (cursor) request.cursor(cursor);
 
-  const ops = await request.call();
+  const ops = await withAbort(request.call(), options.signal);
   const records = ops.records || [];
   const nextCursor = records.length > 0 ? records[records.length - 1].paging_token : null;
 
@@ -566,14 +625,17 @@ export async function fetchOperations(
 
 export async function fetchAccountOffers(
   publicKey: string,
-  network: NetworkName = 'testnet'
+  network: NetworkName = 'testnet',
+  options: HorizonRequestOptions = {}
 ): Promise<StellarSdk.Horizon.ServerApi.OfferRecord[]> {
+  throwIfAborted(options.signal);
+
   const cacheKey = `offers:${publicKey}:${network}`;
   const cached = stellarCache.get(cacheKey);
   if (cached) return cached;
 
   const server = getServer(network);
-  const offers = await server.offers().forAccount(publicKey).call();
+  const offers = await withAbort(server.offers().forAccount(publicKey).call(), options.signal);
   const records = offers.records || [];
   stellarCache.set(cacheKey, records, TTL.ACCOUNT, ['offers', publicKey]);
   return records;
@@ -646,8 +708,11 @@ export function getOperationLabel(type: string): string {
 
 export async function fetchAccountCreationDate(
   publicKey: string,
-  network: NetworkName = 'testnet'
+  network: NetworkName = 'testnet',
+  options: HorizonRequestOptions = {}
 ): Promise<string | null> {
+  throwIfAborted(options.signal);
+
   const cacheKey = `creation-date:${publicKey}:${network}`;
   const cached = stellarCache.get(cacheKey);
   if (cached) return cached;
@@ -655,7 +720,10 @@ export async function fetchAccountCreationDate(
   const server = getServer(network);
 
   try {
-    const ops = await server.operations().forAccount(publicKey).order('asc').limit(1).call();
+    const ops = await withAbort(
+      server.operations().forAccount(publicKey).order('asc').limit(1).call(),
+      options.signal
+    );
 
     const operation = ops.records[0];
     const date = operation?.type === 'create_account' ? operation.created_at || null : null;
@@ -664,7 +732,10 @@ export async function fetchAccountCreationDate(
       stellarCache.set(cacheKey, date, TTL.ACCOUNT, ['account', publicKey]);
     }
     return date;
-  } catch {
+  } catch (error) {
+    // A creation date is best-effort, but an abort is not a "no date found" —
+    // swallowing it would let a cancelled read resolve and clear current state.
+    if ((error as Error | undefined)?.name === 'AbortError') throw error;
     return null;
   }
 }
@@ -1441,15 +1512,24 @@ export function formatClaimPredicate(predicate: Record<string, unknown>): string
 
 export async function fetchClaimableBalances(
   publicKey: string,
-  network: NetworkName = 'testnet'
+  network: NetworkName = 'testnet',
+  options: HorizonRequestOptions = {}
 ): Promise<ClaimableBalanceRecord[]> {
+  throwIfAborted(options.signal);
+
   const cacheKey = `claimable:${publicKey}:${network}`;
   const cached = stellarCache.get(cacheKey);
   if (cached) return cached;
 
   const config = NETWORKS[network];
   const url = `${config.horizonUrl}/claimable_balances?claimant=${encodeURIComponent(publicKey)}&limit=50`;
-  const response = await rateLimitedFetch(url, undefined, 'medium', config.customHeaders);
+  // This path goes through `fetch`, so the signal cancels the request on the wire.
+  const response = await rateLimitedFetch(
+    url,
+    options.signal ? { signal: options.signal } : undefined,
+    'medium',
+    config.customHeaders
+  );
 
   if (!response.ok) throw new Error(`Horizon error ${response.status}`);
 
@@ -1457,6 +1537,275 @@ export async function fetchClaimableBalances(
   const records: ClaimableBalanceRecord[] = data._embedded?.records ?? [];
   stellarCache.set(cacheKey, records, TTL.ACCOUNT, ['claimable', publicKey]);
   return records;
+}
+
+// ─── Claimable Balance predicate explanation ───────────────────────────────────
+
+/**
+ * Structured, human-readable explanation of a claimable-balance claimant
+ * predicate. Used by the claimable-balance workspace to explain *when* and
+ * *whether* a balance can be claimed.
+ */
+export interface PredicateExplanation {
+  /** Normalized predicate kind. */
+  kind: 'unconditional' | 'abs_before' | 'abs_after' | 'rel_before' | 'and' | 'or' | 'not' | 'unknown';
+  /** Short human-readable summary. */
+  summary: string;
+  /** Whether the predicate currently permits a claim (best-effort, null = unknown). */
+  claimableNow: boolean | null;
+  /** Epoch ms at/after which the balance becomes claimable, if determinable. */
+  claimableAt: number | null;
+  /** Sub-explanations for `and` / `or` / `not` predicates. */
+  children?: PredicateExplanation[];
+}
+
+function toEpochMs(value: unknown): number | null {
+  if (typeof value === 'number') return value * 1000; // Horizon timestamps are seconds
+  if (typeof value === 'string') {
+    const n = Number(value);
+    if (!Number.isNaN(n) && value.trim() !== '') return n * 1000;
+    const t = Date.parse(value);
+    if (!Number.isNaN(t)) return t;
+  }
+  return null;
+}
+
+/** Combine child `claimableNow` results for an AND predicate. */
+function combineAnd(children: PredicateExplanation[]): boolean | null {
+  if (children.length === 0) return null;
+  if (children.some((c) => c.claimableNow === false)) return false;
+  if (children.some((c) => c.claimableNow === null)) return null;
+  return true;
+}
+
+/** Combine child `claimableNow` results for an OR predicate. */
+function combineOr(children: PredicateExplanation[]): boolean | null {
+  if (children.length === 0) return null;
+  if (children.some((c) => c.claimableNow === true)) return true;
+  if (children.some((c) => c.claimableNow === null)) return null;
+  return false;
+}
+
+/**
+ * Explain a claimant predicate deterministically.
+ *
+ * @param predicate - Raw Horizon predicate object (or already a string/object)
+ * @param now - Reference timestamp in ms (defaults to `Date.now()`); injectable
+ *              for tests and deterministic rendering.
+ * @returns {PredicateExplanation}
+ */
+export function explainClaimPredicate(predicate: unknown, now: number = Date.now()): PredicateExplanation {
+  if (!predicate || typeof predicate !== 'object' || Array.isArray(predicate) || Object.keys(predicate).length === 0) {
+    return {
+      kind: 'unconditional',
+      summary: 'Unconditional — claimable by the recipient at any time',
+      claimableNow: true,
+      claimableAt: null,
+    };
+  }
+
+  const p = predicate as Record<string, unknown>;
+
+  if ('unconditional' in p) {
+    return {
+      kind: 'unconditional',
+      summary: 'Unconditional — claimable by the recipient at any time',
+      claimableNow: true,
+      claimableAt: null,
+    };
+  }
+
+  if ('abs_before' in p) {
+    const ms = toEpochMs(p.abs_before);
+    if (ms == null) {
+      return { kind: 'abs_before', summary: `Before ${String(p.abs_before)}`, claimableNow: null, claimableAt: null };
+    }
+    return {
+      kind: 'abs_before',
+      summary: `Claimable before ${new Date(ms).toUTCString()}`,
+      claimableNow: now < ms,
+      claimableAt: null,
+    };
+  }
+
+  if ('abs_after' in p) {
+    const ms = toEpochMs(p.abs_after);
+    if (ms == null) {
+      return { kind: 'abs_after', summary: `After ${String(p.abs_after)}`, claimableNow: null, claimableAt: null };
+    }
+    return {
+      kind: 'abs_after',
+      summary: `Claimable after ${new Date(ms).toUTCString()}`,
+      claimableNow: now >= ms,
+      claimableAt: ms,
+    };
+  }
+
+  if ('rel_before' in p) {
+    const secs = Number(p.rel_before);
+    if (Number.isNaN(secs)) {
+      return { kind: 'rel_before', summary: `Within ${String(p.rel_before)}s of claim`, claimableNow: null, claimableAt: null };
+    }
+    return {
+      kind: 'rel_before',
+      summary: `Claimable within ${secs}s of the balance's creation ledger`,
+      claimableNow: null,
+      claimableAt: null,
+    };
+  }
+
+  if ('and' in p) {
+    const children = Array.isArray(p.and) ? (p.and as unknown[]).map((c) => explainClaimPredicate(c, now)) : [];
+    return {
+      kind: 'and',
+      summary: `All of: ${children.map((c) => c.summary).join(' AND ')}`,
+      claimableNow: combineAnd(children),
+      claimableAt: null,
+      children,
+    };
+  }
+
+  if ('or' in p) {
+    const children = Array.isArray(p.or) ? (p.or as unknown[]).map((c) => explainClaimPredicate(c, now)) : [];
+    return {
+      kind: 'or',
+      summary: `Any of: ${children.map((c) => c.summary).join(' OR ')}`,
+      claimableNow: combineOr(children),
+      claimableAt: null,
+      children,
+    };
+  }
+
+  if ('not' in p) {
+    const child = explainClaimPredicate(p.not, now);
+    return {
+      kind: 'not',
+      summary: `NOT (${child.summary})`,
+      claimableNow: child.claimableNow === null ? null : !child.claimableNow,
+      claimableAt: null,
+      children: [child],
+    };
+  }
+
+  return {
+    kind: 'unknown',
+    summary: JSON.stringify(predicate),
+    claimableNow: null,
+    claimableAt: null,
+  };
+}
+
+// ─── Claimable Balance predicate builder ───────────────────────────────────────
+
+/**
+ * Declarative spec for building a Stellar claimable-balance claimant predicate.
+ * Kept UI-agnostic and pure so it can be unit-tested without the Stellar SDK.
+ */
+export type PredicateSpec =
+  | { type: 'unconditional' }
+  | { type: 'before'; date: string | Date }
+  | { type: 'after'; date: string | Date }
+  | { type: 'relative'; seconds: number }
+  | { type: 'and'; predicates: PredicateSpec[] }
+  | { type: 'or'; predicates: PredicateSpec[] }
+  | { type: 'not'; predicate: PredicateSpec };
+
+function toISODate(value: string | Date): string | null {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'string') {
+    const t = Date.parse(value);
+    if (!Number.isNaN(t)) return new Date(t).toISOString();
+  }
+  return null;
+}
+
+/**
+ * Build a Stellar claimant predicate object from a declarative {@link PredicateSpec}.
+ *
+ * @param spec - The predicate specification
+ * @returns A plain predicate object consumable by `StellarSdk.Claimant`
+ * @throws {TypeError} If the spec is invalid (bad date, non-positive relative
+ *                      time, too few operands, or unknown type)
+ */
+export function buildClaimPredicate(spec: PredicateSpec): Record<string, unknown> {
+  if (!spec || typeof spec !== 'object') {
+    throw new TypeError('buildClaimPredicate: spec must be an object');
+  }
+  switch (spec.type) {
+    case 'unconditional':
+      return { unconditional: null };
+    case 'before': {
+      const iso = toISODate(spec.date);
+      if (!iso) throw new TypeError('buildClaimPredicate: "before" requires a valid date');
+      return { abs_before: iso };
+    }
+    case 'after': {
+      const iso = toISODate(spec.date);
+      if (!iso) throw new TypeError('buildClaimPredicate: "after" requires a valid date');
+      return { abs_after: iso };
+    }
+    case 'relative': {
+      const secs = Number(spec.seconds);
+      if (!Number.isFinite(secs) || secs <= 0) {
+        throw new TypeError('buildClaimPredicate: "relative" requires a positive number of seconds');
+      }
+      return { rel_before: Math.floor(secs) };
+    }
+    case 'and':
+    case 'or': {
+      const list = spec.predicates;
+      if (!Array.isArray(list) || list.length < 2) {
+        throw new TypeError(`buildClaimPredicate: "${spec.type}" requires at least two predicates`);
+      }
+      return { [spec.type]: list.map(buildClaimPredicate) };
+    }
+    case 'not': {
+      if (!spec.predicate) throw new TypeError('buildClaimPredicate: "not" requires a predicate');
+      return { not: buildClaimPredicate(spec.predicate) };
+    }
+    default:
+      throw new TypeError(`buildClaimPredicate: unknown predicate type "${(spec as { type?: string }).type}"`);
+  }
+}
+
+// ─── Claimable Balance inspection ──────────────────────────────────────────────
+
+/**
+ * Fetch a single claimable balance by its id (Horizon `GET /claimable_balances/:id`).
+ *
+ * Used by the workspace "inspect" view to show full claimant/predicate detail.
+ *
+ * @param balanceId - Horizon claimable-balance id (non-empty string)
+ * @param network - Target network
+ * @returns {Promise<ClaimableBalanceRecord>}
+ * @throws {TypeError} If `balanceId` is not a non-empty string
+ * @throws {Error} If the network is unsupported or Horizon returns an error
+ *                  (404 → "not found")
+ */
+export async function fetchClaimableBalanceById(
+  balanceId: string,
+  network: NetworkName = 'testnet'
+): Promise<ClaimableBalanceRecord> {
+  if (typeof balanceId !== 'string' || balanceId.trim().length === 0) {
+    throw new TypeError('fetchClaimableBalanceById: balanceId must be a non-empty string');
+  }
+  const config = NETWORKS[network];
+  if (!config || !config.horizonUrl) {
+    throw new Error(`fetchClaimableBalanceById: unsupported network "${network}"`);
+  }
+
+  const url = `${config.horizonUrl}/claimable_balances/${encodeURIComponent(balanceId)}`;
+  const response = await rateLimitedFetch(url, undefined, 'medium', config.customHeaders);
+
+  if (response.status === 404) {
+    throw new Error(`Claimable balance ${balanceId} not found`);
+  }
+  if (!response.ok) {
+    throw new Error(`Horizon error ${response.status} while fetching claimable balance`);
+  }
+
+  const data = await response.json();
+  return data as ClaimableBalanceRecord;
 }
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
