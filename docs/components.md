@@ -132,9 +132,30 @@ Renders Soroban smart contract events as typed, searchable data with safe raw XD
 ---
 
 ### `<DEXExplorer>`
-**File:** `src/components/dashboard/DEXExplorer.jsx`
+**File:** `src/components/dashboard/DEXExplorer.tsx`
 
-Stellar DEX order book, trade history, and path-finding explorer.
+Stellar DEX order book, trade history, AMM liquidity pools, and integrated trade execution with slippage protection.
+
+---
+
+### `<SlippageTradePanel>`
+**File:** `src/components/dashboard/SlippageTradePanel.tsx`
+
+Interactive trade builder and slippage protection panel.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `sellingAsset` | `string` | `'native'` | Asset code or `CODE:ISSUER` being sold |
+| `buyingAsset` | `string` | `'USDC:G...'` | Asset code or `CODE:ISSUER` being bought |
+| `orderbook` | `OrderBookData \| null` | `null` | Orderbook bids and asks |
+| `pool` | `AmmPoolData \| null` | `null` | AMM liquidity pool reserve data |
+| `onBuildTrade` | `Function` | `undefined` | Callback fired on protected trade construction |
+
+#### Key Features:
+- **Real-Time Price Impact Calculation**: Calculates spot price, execution price, and price impact % across orderbook depth levels and AMM constant-product reserves ($x \cdot y = k$).
+- **User-Selected Slippage Tolerance**: Supports preset tolerance levels (`0.1%`, `0.5%`, `1.0%`, `3.0%`) and custom % inputs.
+- **Enforced Trade Guard**: Automatically blocks trade construction (`isValid = false`) and disables building if price impact exceeds user tolerance or market liquidity is insufficient.
+- **Protected Parameter Output**: Emits minimum received output (`destMin` for strict send) or maximum sent (`sendMax` for strict receive) to guarantee slippage limits on-chain.
 
 ---
 
