@@ -53,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'sorobanDebug', label: 'Soroban Debugging', icon: '🐞' },
   { id: 'learningHub', label: 'Learning Hub', icon: '🎓' },
   { id: 'faucet', label: 'Faucet', icon: '⬡' },
+  { id: 'batchXdrImport', label: 'Batch XDR Import', icon: '📦' },
 
   { type: 'header', label: 'EXPLORE' },
   { id: 'dex', label: 'DEX', icon: '⇌' },

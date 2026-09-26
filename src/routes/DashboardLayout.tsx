@@ -72,6 +72,7 @@ const TransactionAnalytics = lazy(
   () => import('../components/dashboard/TransactionAnalyticsDashboard')
 );
 const RefactoringAdvisor = lazyTab(() => import('../components/dashboard/RefactoringAdvisor'));
+const BatchXdrImport = lazyTab(() => import('../components/dashboard/BatchXdrImport'));
 
 const TABS: Record<string, TabComponent> = {
   overview: Overview,
@@ -124,6 +125,7 @@ const TABS: Record<string, TabComponent> = {
   txAnalytics: TransactionAnalytics,
   anomalyViz: lazyTab(() => import('../components/dashboard/AnomalyVisualization')),
   sandboxAnalytics: lazyTab(() => import('../components/dashboard/SandboxAnalyticsDemo')),
+  batchXdrImport: BatchXdrImport,
 };
 
 function TabLoadingFallback() {
